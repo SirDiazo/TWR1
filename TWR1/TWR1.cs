@@ -33,6 +33,7 @@ namespace VerticalVelocity
         private double TWR1MaxThrust = 0f; //Max thrust contolled by throttle
         private double TWR1MinThrust = 0f; //Min thrust controlled by throttle, not necessarily zero if solid rocket boosters are firing
         private ModuleEngines TWR1EngineModule; //part of check for solid rocket booster
+        private ModuleEnginesFX TWR1EngineModuleFX;
         private CelestialBody TWR1SOI; //what are we orbiting?
         private double TWR1GravHeight = 0f; //distance from center of body for gravity force
         private double TWR1GravForce = 0f; //acceleration down due to gravity at this moment
@@ -782,15 +783,16 @@ namespace VerticalVelocity
 
             foreach (Part part in TWR1Vessel.Parts) //go through each part on vessel
             {
-
+                
                // foreach(Effects
-                if (part.Modules.Contains("ModuleEngines")) //is part an engine?
+                if (part.Modules.Contains("ModuleEngines") | part.Modules.Contains("ModuleEnginesFX")) //is part an engine?
                 {
                     foreach (PartModule TWR1PartModule in part.Modules) //change from part to partmodules
                     {
                         
                         if (TWR1PartModule.moduleName == "ModuleEngines") //find partmodule engine on th epart
                         {
+                           
                             TWR1EngineModule = (ModuleEngines)TWR1PartModule; //change from partmodules to moduleengines
                             if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModule.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
                             {
@@ -803,10 +805,27 @@ namespace VerticalVelocity
                                 TWR1MinThrust += (float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F; //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
                             }
                         }
+                        else if (TWR1PartModule.moduleName == "ModuleEnginesFX") //find partmodule engine on th epart
+                        {
+
+                            TWR1EngineModuleFX = (ModuleEnginesFX)TWR1PartModule; //change from partmodules to moduleengines
+                            if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModuleFX.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
+                            {
+                                TWR1MaxThrust += (float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F; //add engine thrust to MaxThrust
+                                TWR1MinThrust += (float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F; //add engine thrust to MinThrust since this is an SRB
+                            }
+                            else if (TWR1EngineModuleFX.isOperational)//we know it is an engine and not a solid rocket booster so:
+                            {
+                                TWR1MaxThrust += (float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F; //add engine thrust to MaxThrust
+                                TWR1MinThrust += (float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F; //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
+                            }
+                        }
 
                     }
                 }
+               
             }
+            
             if (TWR1MaxThrust < 1) //if MaxThrust is zero, a divide by zero error gets thrown later, so...
             {
                 TWR1MaxThrust = 1; //set MaxThrust to at least 1 to avoid this
