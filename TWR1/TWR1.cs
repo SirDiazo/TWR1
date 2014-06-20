@@ -784,9 +784,26 @@ namespace VerticalVelocity
             foreach (Part part in TWR1Vessel.Parts) //go through each part on vessel
             {
                 
-               // foreach(Effects
+               
+                
+                
                 if (part.Modules.Contains("ModuleEngines") | part.Modules.Contains("ModuleEnginesFX")) //is part an engine?
                 {
+                    float DavonThrottleID = 0;
+                    if(part.Modules.Contains("DifferentialThrustEngineModule")) //Devon Throttle Control Installed?
+                    {
+                        foreach(PartModule pm in part.Modules)
+                        {
+                            
+                            if (pm.moduleName=="DifferentialThrustEngineModule")
+                            {
+                                DavonThrottleID = (float)pm.Fields.GetValue("throttleFloatSelect"); //which throttle is engine assigned to?
+                            }
+                        }
+
+                    }
+                    if(DavonThrottleID == 0f)
+                    {
                     foreach (PartModule TWR1PartModule in part.Modules) //change from part to partmodules
                     {
                         
@@ -822,6 +839,7 @@ namespace VerticalVelocity
                         }
 
                     }
+                }
                 }
                
             }
