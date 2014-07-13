@@ -1370,40 +1370,48 @@ namespace VerticalVelocity
 
                 foreach (Part p in partToRay)
                 {
-                    if (p.collider.enabled) //only check part if it has collider enabled
+                    try
                     {
-                        Vector3 partEdge = p.collider.ClosestPointOnBounds(FlightGlobals.currentMainBody.position); //find collider edge closest to ground
-                        RaycastHit pHit;
-                        Ray pRayDown = new Ray(partEdge, FlightGlobals.currentMainBody.position);
-                        LayerMask pRayMask = 33792; //layermask does not ignore layer 0, why?
-                        if (Physics.Raycast(pRayDown, out pHit, (float)(FlightGlobals.ActiveVessel.mainBody.Radius + FlightGlobals.ActiveVessel.altitude), pRayMask)) //cast ray
+                        if (p.collider.enabled) //only check part if it has collider enabled
                         {
-
-                            if (firstRay) //first ray this update, always set height to this
+                            Vector3 partEdge = p.collider.ClosestPointOnBounds(FlightGlobals.currentMainBody.position); //find collider edge closest to ground
+                            RaycastHit pHit;
+                            Ray pRayDown = new Ray(partEdge, FlightGlobals.currentMainBody.position);
+                            LayerMask pRayMask = 33792; //layermask does not ignore layer 0, why?
+                            if (Physics.Raycast(pRayDown, out pHit, (float)(FlightGlobals.ActiveVessel.mainBody.Radius + FlightGlobals.ActiveVessel.altitude), pRayMask)) //cast ray
                             {
 
-                                landHeight = pHit.distance;
+                                if (firstRay) //first ray this update, always set height to this
+                                {
 
+                                    landHeight = pHit.distance;
+
+                                    firstRay = false;
+                                }
+                                else
+                                {
+
+                                    landHeight = Math.Min(landHeight, pHit.distance);
+
+
+                                }
+                                //if (pHit.transform.gameObject.layer != 10 && pHit.transform.gameObject.layer != 15)  //Error trap, ray should only hit layers 10 and 15
+                                //{
+                                //    print(p.name + " " + pHit.transform.gameObject.layer + " " + pHit.collider.name + " " + pHit.distance);
+                                //}
+
+                            }
+                            else if (!firstRay) //error trap, ray hit nothing
+                            {
+                                landHeight = FlightGlobals.ActiveVessel.altitude;
                                 firstRay = false;
                             }
-                            else
-                            {
-
-                                landHeight = Math.Min(landHeight, pHit.distance);
-
-
-                            }
-                            //if (pHit.transform.gameObject.layer != 10 && pHit.transform.gameObject.layer != 15)  //Error trap, ray should only hit layers 10 and 15
-                            //{
-                            //    print(p.name + " " + pHit.transform.gameObject.layer + " " + pHit.collider.name + " " + pHit.distance);
-                            //}
-
                         }
-                        else if (!firstRay) //error trap, ray hit nothing
-                        {
-                            landHeight = FlightGlobals.ActiveVessel.altitude;
-                            firstRay = false;
-                        }
+                    }
+                    catch
+                    {
+                        landHeight = FlightGlobals.ActiveVessel.altitude;
+                        firstRay = false;
                     }
 
                 }
