@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using System.Reflection;
+using System.Timers;
 using KSP.IO;
 
 
@@ -84,7 +85,7 @@ namespace VerticalVelocity
         private double TWR1SpeedStep = 1f; //Size of speed change per tap, default to 1m/s
         private string TWR1SpeedStepString; //speed step as string for GUI text entry
         private Texture2D TWR1SettingsIcon = new Texture2D(20, 22, TextureFormat.ARGB32, false); //toolbar icon texture
-        private Rect TWR1SettingsWin = new Rect(500, 500, 190, 145);  //settings window position
+        private Rect TWR1SettingsWin = new Rect(500, 500, 200, 145);  //settings window position
         private bool TWR1SettingsShow = false; //show settings window?
         private bool TWR1SelectingKey = false; //are we selecting a new key?
         private double TWR1LastVel; //vessel vertical velocity last physics frame
@@ -92,6 +93,18 @@ namespace VerticalVelocity
         private double TWR1ThrustDiscrepancy; //difference in kN between thrusts last frame
         private double TWR1LastFrameActualThrust; //actual "thrust" last frame, includes both engine and aerodynamic lift
         private Queue<double> TWR1ThrustQueue; //last 5 frames of thrust to average out, it's too bouncy to use just last frame
+        private float ThrustUnderRun = 0; //difference between requested and actual thrust, hello jet engines
+        GameObject lineObj = new GameObject("Line");
+        LineRenderer theLine = new LineRenderer();
+        private Timer showLineTime;
+        private static bool timerElapsed = false;
+        private bool timerRunning = false;
+        Vector3 TWR1ControlUp;
+        public static int ControlDirection = 0; //control direction for up, 0 is for rockets, 1 for cockpits, 2 through 5 the other directions.
+        private Part LastVesselRoot; //saved vessel last update pass, use rootpart for check
+        private KeyCode throttleUp;
+        private KeyCode throttleDown;
+        private KeyCode throttleCut;
         
         public class VslTime
         {
@@ -102,6 +115,7 @@ namespace VerticalVelocity
         } //class for 15second landed delay
         public static List<VslTime> SCVslList; //vessel list
         private bool TWR1VesselActive = true; //do we have a vessel to control?
+        TWR1Data rootTWR1Data;
         
 
         //public void Awake() //Awake runs on mod load
@@ -109,8 +123,42 @@ namespace VerticalVelocity
 
         //}
 
+        public Vector3 SetDirection()
+        {
+            if (ControlDirection == 0)
+            {
+                return (TWR1Vessel.rootPart.transform.up);
+            }
+            if (ControlDirection == 1)
+            {
+                return (TWR1Vessel.rootPart.transform.forward);
+            }
+            if (ControlDirection == 2)
+            {
+                return (-TWR1Vessel.rootPart.transform.up);
+            }
+            if (ControlDirection == 3)
+            {
+                return (-TWR1Vessel.rootPart.transform.forward);
+            }
+            if (ControlDirection == 4)
+            {
+                return (TWR1Vessel.rootPart.transform.right);
+            }
+            if (ControlDirection == 5)
+            {
+                return (-TWR1Vessel.rootPart.transform.right);
+            }
+            else
+            {
+                return (TWR1Vessel.rootPart.transform.up);
+            }
+        }
+        
         public void Start() //Start runs on mod start, after all other mods loaded
         {
+            
+            
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
@@ -171,7 +219,7 @@ namespace VerticalVelocity
 
 
             TWR1WinPos = new Rect(TWR1WinPosWidth, TWR1WinPosHeight, 215, 180); //set window position
-            TWR1SettingsWin = new Rect(TWR1WinPosWidth + 218, TWR1WinPosHeight, 190, 145); //set settings window position to just next to main window
+            TWR1SettingsWin = new Rect(TWR1WinPosWidth + 218, TWR1WinPosHeight, 200, 180); //set settings window position to just next to main window
             if (ToolbarManager.ToolbarAvailable) //check if toolbar available, load if it is
             {
 
@@ -184,7 +232,41 @@ namespace VerticalVelocity
                     TWR1Show = !TWR1Show;
                 };
             }
+            showLineTime = new System.Timers.Timer(3000);
+            //showLineTime.Interval = 3;
+            showLineTime.Elapsed += new ElapsedEventHandler(LineTimeOut);
+            showLineTime.AutoReset = false;
+            
 
+            theLine = lineObj.AddComponent<LineRenderer>();
+            theLine.material = new Material(Shader.Find("Particles/Additive"));
+            theLine.SetColors(Color.red, Color.red);
+            theLine.SetWidth(0, 0);
+            theLine.SetVertexCount(2);
+            theLine.useWorldSpace = false;
+            LastVesselRoot = new Part();
+            
+        }
+
+        public void LineTimeOut(System.Object source, ElapsedEventArgs e)
+        {
+            timerElapsed = true; //timer runs in seperate thread, set static bool to true to get back to our main thread
+        }
+        
+        public void ShowLine()
+        {
+            showLineTime.Start();
+            timerRunning = true;
+            theLine.SetWidth(1, 0);
+            
+
+   
+        }
+
+        public void HideLine()
+        {
+            theLine.SetWidth(0, 0);
+            
         }
 
         public void OnDisable()
@@ -307,7 +389,46 @@ namespace VerticalVelocity
                 GUI.FocusControl(""); //non-number key was pressed, give focus back to ship control
             }
 
-           
+            if (GUI.Button(new Rect(10, 140, 70, 25), "Direction")) //force skycrane mode off
+            {
+                ShowLine();
+            }
+            if (GUI.Button(new Rect(80, 140, 23, 20), "U")) //force skycrane mode off
+            {
+                ControlDirection = 0;
+                rootTWR1Data.controlDirection = 0;
+                ShowLine();
+            }
+            if (GUI.Button(new Rect(80, 160, 23, 20), "D")) //force skycrane mode off
+            {
+                ControlDirection = 2;
+                rootTWR1Data.controlDirection = 2;
+                ShowLine();
+            }
+            if (GUI.Button(new Rect(103, 140, 23, 25), "F")) //force skycrane mode off
+            {
+                ControlDirection = 3;
+                rootTWR1Data.controlDirection = 3;
+                ShowLine();
+            }
+            if (GUI.Button(new Rect(126, 140, 23, 25), "B")) //force skycrane mode off
+            {
+                ControlDirection = 1;
+                rootTWR1Data.controlDirection = 1;
+                ShowLine();
+            }
+            if (GUI.Button(new Rect(103, 160, 23, 25), "L")) //force skycrane mode off
+            {
+                ControlDirection = 5;
+                rootTWR1Data.controlDirection = 5;
+                ShowLine();
+            }
+            if (GUI.Button(new Rect(126, 160, 23, 25), "R")) //force skycrane mode off
+            {
+                ControlDirection = 4;
+                rootTWR1Data.controlDirection = 4;
+                ShowLine();
+            }
 
             GUI.skin.textField.alignment = TWR1DefaultTextFieldAlign; //reset GUI skin stuff
             GUI.skin.label.alignment = TWR1DefautTextAlign;//same^
@@ -523,7 +644,7 @@ namespace VerticalVelocity
             else //if (!TWR1HCArmed)
             {
 
-                if (GUI.Button(new Rect(15, 153, 175, 25), TWR1ControlOffText)) //text displayed changes if mod is out of date
+                if (GUI.Button(new Rect(15, 153, 175, 25), "Control Off")) //text displayed changes if mod is out of date
                 {
                     TWR1Engaged = false;
                     TWR1Show = false;
@@ -534,6 +655,8 @@ namespace VerticalVelocity
             if(GUI.Button(new Rect(185,153,25,25), TWR1SettingsIcon)) //settings button
             {
                 TWR1SettingsShow = !TWR1SettingsShow;
+                TWR1SettingsWin.x = TWR1WinPos.x + 218;
+                TWR1SettingsWin.y = TWR1WinPos.y;
             }
 
             GUI.skin.textField.alignment = TWR1DefaultTextFieldAlign; //reset text defaults
@@ -546,15 +669,27 @@ namespace VerticalVelocity
         public void Update()
         {
 
-           // print(TWR1Vessel.ActionGroups.groups[15]);
+            if (timerElapsed)
+            {
+                HideLine();
+                timerElapsed = false;
+                timerRunning = false;
+            }
+            if (timerRunning)
+            {
+                theLine.transform.parent = TWR1Vessel.rootPart.transform;
+                theLine.transform.localPosition = Vector3.zero;
+                theLine.transform.rotation = Quaternion.identity;
+                theLine.SetPosition(0, new Vector3(0, 0, 0));
+                theLine.SetPosition(1, TWR1ControlUp * 50);
+            }
             
             
 
             if (Input.GetKeyDown(TWR1KeyCode) == true) //Does the Z key get pressed, enabling this mod? Note this is only true on the first Update cycle the key is pressed.
             {
-
+               
                 TWR1Show = true;
-
                 if (TWR1Engaged == false) //TWR1 not engaged when Z pressed so input our current velocity into velocity setpoint
                 {
                     TWR1VelocitySetpoint = (float)TWR1Vessel.verticalSpeed;
@@ -726,6 +861,8 @@ namespace VerticalVelocity
         public void FixedUpdate() //forum says "all physics calculations should be on FixedUpdate, not Update". not sure a throttle adjustment qualifies as a physics calc, but put it here anyway
         {
 
+            
+            
 
             if (!TWR1Engaged) { TWR1HeightCtrl = false; } //mod has been disengegaed, disengage height control
             if (!TWR1HeightCtrl)
@@ -736,6 +873,23 @@ namespace VerticalVelocity
             }
 
             TWR1Vessel = FlightGlobals.ActiveVessel; //Set vessel to active vessel
+            if (TWR1Vessel.rootPart != LastVesselRoot)
+            {
+                print("TWR1 Root Part Changed");
+
+                if (!TWR1Vessel.rootPart.Modules.Contains("TWR1Data"))
+                {
+                    print("TWR1 Module not found");
+                    TWR1Vessel.rootPart.AddModule("TWR1Data");
+                }
+                rootTWR1Data = (TWR1Data)TWR1Vessel.rootPart.Modules.OfType<TWR1Data>().First();
+                ControlDirection = rootTWR1Data.controlDirection;
+                LastVesselRoot = TWR1Vessel.rootPart;
+                //print("TWR1 Ctrl " + ControlDirection);
+            }
+
+           // print("Ctr; " + ControlDirection + " " + rootTWR1Data.controlDirection);
+
             if (TWR1Vessel.state == Vessel.State.DEAD)
             {
                 TWR1VesselActive = false;
@@ -750,6 +904,7 @@ namespace VerticalVelocity
 
             TWR1MaxThrust = 0f; //maxthrust reset
             TWR1MinThrust = 0f; //minthrust reset
+            ThrustUnderRun = 0f; //thrust dif reset
             TWR1SOI = TWR1Vessel.mainBody; //set body we are orbiting
             TWR1MassLast = TWR1Mass;
             TWR1Mass = TWR1Vessel.GetTotalMass(); //vessel's total mass, including resources
@@ -766,17 +921,23 @@ namespace VerticalVelocity
 
             //next 6 lines find vessel pitch, copy-pasted from MechJeb so no clue what these lines are acutally doing.
             //Used under Mechjeb's GPL 3 license.
+            //version 1.11: removed mechjeb code, used own method now for up
             TWR1CoM = TWR1Vessel.findWorldCenterOfMass();
             TWR1Up = (TWR1CoM - TWR1Vessel.mainBody.position).normalized;
-            TWR1North = Vector3d.Exclude(TWR1Up, (TWR1Vessel.mainBody.position + TWR1Vessel.mainBody.transform.up * (float)TWR1Vessel.mainBody.Radius) - TWR1CoM).normalized;
-            TWR1RotSurf = Quaternion.LookRotation(TWR1North, TWR1Up);
-            TWR1RotVesselSurf = Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(TWR1Vessel.GetTransform().rotation) * TWR1RotSurf);
-            TWR1VesselPitch = (TWR1RotVesselSurf.eulerAngles.x > 180) ? (360.0 - TWR1RotVesselSurf.eulerAngles.x) : -TWR1RotVesselSurf.eulerAngles.x; //vessel pitch found
+            //TWR1North = Vector3d.Exclude(TWR1Up, (TWR1Vessel.mainBody.position + TWR1Vessel.mainBody.transform.up * (float)TWR1Vessel.mainBody.Radius) - TWR1CoM).normalized;
+           // TWR1RotSurf = Quaternion.LookRotation(TWR1North, TWR1Up);
+            //TWR1RotVesselSurf = Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(TWR1Vessel.GetTransform().rotation) * TWR1RotSurf);
+           // TWR1VesselPitch = (TWR1RotVesselSurf.eulerAngles.x > 180) ? (360.0 - TWR1RotVesselSurf.eulerAngles.x) : -TWR1RotVesselSurf.eulerAngles.x; //vessel pitch found
             //end of code from Mechjeb
-
-            
-
-            TWR1OffsetVert = Math.Max(Math.Min(Math.Abs(TWR1VesselPitch - 90), 89), 0); //change vessel pitch to angle off vertical for thrust compensation
+            TWR1ControlUp = SetDirection();
+            TWR1OffsetVert = Vector3.Angle(TWR1Up, TWR1ControlUp);
+            TWR1VesselPitch = Math.Max((90 - TWR1OffsetVert), 0);
+            //print("pitch " + TWR1OffsetVert);
+            //switch to just using local up? as defined by player?
+            //print("loc " + TWR1Vessel.rootPart.transform.position + " " + TWR1Vessel.rootPart.transform.rotation + " " + TWR1OffsetVert);
+            //print("pitch " + TWR1VesselPitch);
+            //TWR1OffsetVert = Math.Max(Math.Min(Math.Abs(TWR1VesselPitch - 90), 89), 0); //change vessel pitch to angle off vertical for thrust compensation
+            //print("pitch " + TWR1OffsetVert+ " " + AngleTest);
             TWR1OffsetVertRadian = Mathf.Deg2Rad * TWR1OffsetVert; //mathf.cos takes radians, not degrees, ask unity why
             TWR1OffsetVertRatio = Math.Cos(TWR1OffsetVertRadian); //our compensation factor for being offset from vertical
             TWR1HCDistance = Math.Abs(TWR1HCToGround - TWR1HCTarget); //absolute distance to target altitude
@@ -811,6 +972,7 @@ namespace VerticalVelocity
                         {
                            
                             TWR1EngineModule = (ModuleEngines)TWR1PartModule; //change from partmodules to moduleengines
+                            //print("TWR1 " + TWR1EngineModule.currentThrottle + " " + TWR1EngineModule.requestedThrottle);
                             if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModule.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
                             {
                                 TWR1MaxThrust += (float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F; //add engine thrust to MaxThrust
@@ -820,6 +982,7 @@ namespace VerticalVelocity
                             {
                                 TWR1MaxThrust += (float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F; //add engine thrust to MaxThrust
                                 TWR1MinThrust += (float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F; //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
+                                ThrustUnderRun = +(TWR1EngineModule.requestedThrottle - TWR1EngineModule.currentThrottle) * TWR1EngineModule.maxThrust;
                             }
                         }
                         else if (TWR1PartModule.moduleName == "ModuleEnginesFX") //find partmodule engine on th epart
@@ -835,6 +998,7 @@ namespace VerticalVelocity
                             {
                                 TWR1MaxThrust += (float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F; //add engine thrust to MaxThrust
                                 TWR1MinThrust += (float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F; //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
+                                ThrustUnderRun = +(TWR1EngineModuleFX.requestedThrottle - TWR1EngineModuleFX.currentThrottle) * TWR1EngineModuleFX.maxThrust;
                             }
                         }
 
@@ -843,7 +1007,7 @@ namespace VerticalVelocity
                 }
                
             }
-            
+           
             if (TWR1MaxThrust < 1) //if MaxThrust is zero, a divide by zero error gets thrown later, so...
             {
                 TWR1MaxThrust = 1; //set MaxThrust to at least 1 to avoid this
@@ -913,13 +1077,13 @@ namespace VerticalVelocity
                 TWR1DesiredAccelThrustLast = TWR1DesiredAccelThrustLast / TWR1ThrustQueue.Count; //divide by count to get average of desired thrusts over last 5 frames
 
                     //TWR1LastFrameAccel = ((TWR1Vessel.verticalSpeed - TWR1LastVel) * TWR1FixedUpdatePerSec);
-                    TWR1LastFrameActualThrust = (((TWR1Vessel.verticalSpeed - TWR1LastVel) / Time.fixedDeltaTime)+TWR1GravForce) * TWR1Mass; //get actual thrust of last physics frame, note GravForce has to be present as you are always fighting gravity
-                
-                    TWR1ThrustDiscrepancy = TWR1DesiredAccelThrustLast - TWR1LastFrameActualThrust; //discrepancy between thrusts the last frame
+                    TWR1LastFrameActualThrust = ((((TWR1Vessel.verticalSpeed - TWR1LastVel) / Time.fixedDeltaTime)+TWR1GravForce) * TWR1Mass); //get actual thrust of last physics frame, note GravForce has to be present as you are always fighting gravity
+
+                    TWR1ThrustDiscrepancy = TWR1DesiredAccelThrustLast - TWR1LastFrameActualThrust - ThrustUnderRun; //discrepancy between thrusts the last frame,
                     
                     if (Math.Abs(TWR1ThrustDiscrepancy) < TWR1MaxThrust * .2) //only compensate for aerolift if the value is less the 20% of max thrust. If it's more, almost certain that the thrust discrepancy is caused by other factors
                     {
-                        TWR1DesiredAccelThrust = TWR1DesiredAccelThrust + TWR1ThrustDiscrepancy;
+                        TWR1DesiredAccelThrust = TWR1DesiredAccelThrust + TWR1ThrustDiscrepancy; 
                     }
                 }
 
@@ -964,7 +1128,7 @@ namespace VerticalVelocity
             }
            
             
-            TWR1ThrustQueue.Enqueue(TWR1DesiredAccelThrust); //add desired thrust value to queue
+            TWR1ThrustQueue.Enqueue(TWR1DesiredAccelThrust - ThrustUnderRun); //add desired thrust value to queue
         VesselDead: //escape for no active vessel
             TWR1LastVel = TWR1Vessel.verticalSpeed; //save velocity from this frame for calculations next frame
           
@@ -1260,5 +1424,19 @@ namespace VerticalVelocity
             return landHeight;
         }   
     }
-
+    public class TWR1Data : PartModule
+    {
+        [KSPField(isPersistant = true, guiActive = false)]
+        public int controlDirection = 0; //Serialzed string of actions and action groups
+        public override void OnSave(ConfigNode node)
+        {
+            node.SetValue("controlDirection", controlDirection.ToString());
+            //print("SAVE");
+        }
+        public override void OnLoad(ConfigNode node)
+        {
+            controlDirection = Convert.ToInt32(node.GetValue("controlDirection"));
+            //print("LOAD!"); 
+        }
+    }
 }
