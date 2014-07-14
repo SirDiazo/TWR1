@@ -1040,8 +1040,11 @@ namespace VerticalVelocity
             TWR1HC5Thrust = (Math.Max((TWR1MaxThrust * .05), TWR1MinThrust) / TWR1Mass) - TWR1GravForce; //accel at 5% thrust, makes sure engine is on to allow for ship horizontal speed adjustment. this outside HC method for UI dispaly
             TWR1HC1Thrust = (Math.Max((TWR1MaxThrust * .01), TWR1MinThrust) / TWR1Mass) - TWR1GravForce;
             TWR1HC80Thrust = ((TWR1MaxThrust * .8f) / TWR1Mass) - TWR1GravForce; //use 80% acceleration to account for being off vertical, planet grav reduces accel in this case this outside HC method for UI disaply
-            TWR1HeightControl(); //Height control now sets VelocitySetpoint (version 1.5)
-
+            if (TWR1HeightCtrl)
+            {
+                TWR1HeightControl(); //Height control now sets VelocitySetpoint (version 1.5)
+            }
+            print("Velocity setpoint " + TWR1VelocitySetpoint + " " +TWR1HC80Thrust + " " +TWR1GravForce);
 
 
             if (TWR1HC80Thrust <= 0 && TWR1HeightCtrl == true || TWR1HC1Thrust >= 0 && TWR1HeightCtrl == true) //is height control on and 1% or 80% no longer valid?
@@ -1171,152 +1174,186 @@ namespace VerticalVelocity
             {
                 if (TWR1HCToGround < TWR1HCTarget) //vessel below target height
                 {
+                    //TWR1VelocitySetpoint = (TWR1HCDistToTarget / (TWR1GravForce / 2))*.95;
 
-                    if (TWR1HCDistToTarget < (TWR1HC80Thrust * 2f)) //are we within 2 times 80% thrust as velocity as distance?
+                    if (TWR1HCDistToTarget < TWR1GravForce * 3)
                     {
-                        if (TWR1HeightCtrl)
-                        {
-                            TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .3, (TWR1HCDistToTarget * .3)); //close to target height, desired speed is the smaller of 1/5 gravity or one third the distance to target
-                        } 
+                        TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .5));
+                    }
+
+                    else
+                    {
+                        TWR1VelocitySetpoint = (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 2)) * Math.Abs(TWR1GravForce))) * 1.2;
                     }
                     
-                    else if (TWR1HCDistToTarget < (TWR1HC80Thrust * 5f)) //are we within 5 times 80% thrust as velocity as distance?
-                    {
-                        if (TWR1HeightCtrl)
-                        {
-                            TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .3)); //close to target height, desired speed is the smaller of half gravity or one third the distance to target
-                        } 
+                    //if (TWR1HCDistToTarget < (TWR1HC80Thrust)) //are we within 2 times 80% thrust as velocity as distance?
+                    //{
+                    //    if (TWR1HeightCtrl)
+                    //    {
+                    //        TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .3)); //close to target height, desired speed is the smaller of 1/5 gravity or one third the distance to target
+                    //    } 
+                    //}
+                    
+                    //else if (TWR1HCDistToTarget < (TWR1HC80Thrust * 5f)) //are we within 5 times 80% thrust as velocity as distance?
+                    //{
+                    //    if (TWR1HeightCtrl)
+                    //    {
+                    //        TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .3)); //close to target height, desired speed is the smaller of half gravity or one third the distance to target
+                    //    } 
 
 
-                        TWR1HCFullThrustUp = false; //variable thrust
+                    //    TWR1HCFullThrustUp = false; //variable thrust
 
 
 
-                    }
+                    //}
 
-                    else if (TWR1VelocityCurrent < -0f) //below target height with negative velocity
-                    {
-                        if (TWR1HeightCtrl)
-                        {
-                            TWR1VelocitySetpoint = Math.Min(TWR1HC80Thrust - TWR1VelocityCurrent, Math.Abs(TWR1HCDistToTarget) * 3); //set thrust to 80%, 'adding' our current velocity. remember downwards is negative. limit to 1/3 the distance to target to avoid overshoots
-                            TWR1HCFullThrustUp = false;
-                        } 
-
-
-                    }
-                    else //below target height with positive velocity
-                    {
-                        if (TWR1HCFullThrustUp) //previous frame we were low enough to full thrust
-                        {
-
-                            TWR1HCtime = TWR1VelocityCurrent / Math.Abs(TWR1HC5Thrust); //should we exit full thrust to variable thrust?
-                            TWR1HCneeded = TWR1VelocityCurrent / 2 * TWR1HCtime; //same^
-                            if (TWR1HCneeded > TWR1HCDistToTarget)//same^
-                            {
-                                TWR1HCFullThrustUp = false; //closing on target, go to variable thrust
-                            }
-                        }
-                        else if (!TWR1HCFullThrustUp) //we were in variable thrust last frame
-                        {
-
-                            TWR1HCtime = TWR1VelocityCurrent / Math.Abs(TWR1HC5Thrust); //goto full thrust?
-                            TWR1HCneeded = TWR1VelocityCurrent / 2 * TWR1HCtime;//same^
-                            if (TWR1HCneeded < TWR1HCDistToTarget)//same^
-                            {
-                                TWR1HCFullThrustUp = true;//no longer near target, go full thrust
-                            }
-                        }
+                    //else if (TWR1VelocityCurrent < -0f) //below target height with negative velocity
+                    //{
+                    //    if (TWR1HeightCtrl)
+                    //    {
+                    //        TWR1VelocitySetpoint = Math.Min(TWR1HC80Thrust - TWR1VelocityCurrent, Math.Abs(TWR1HCDistToTarget) * 3); //set thrust to 80%, 'adding' our current velocity. remember downwards is negative. limit to 1/3 the distance to target to avoid overshoots
+                    //        TWR1HCFullThrustUp = false;
+                    //    } 
 
 
-                        if (TWR1HeightCtrl) //set thust
-                        {
-                            if (TWR1HCFullThrustUp) //in full thrust?
-                            {
+                    //}
+                    //else //below target height with positive velocity
+                    //{
+                    //    if (TWR1HCFullThrustUp) //previous frame we were low enough to full thrust
+                    //    {
 
-                                TWR1VelocitySetpoint = TWR1HC80Thrust + TWR1VelocityCurrent; //need to add velocity so vertical acceleration happens, limit to 80%  for wiggle room
-                            }
-                            else
-                            {
+                    //        TWR1HCtime = TWR1VelocityCurrent / Math.Abs(TWR1HC5Thrust); //should we exit full thrust to variable thrust?
+                    //        TWR1HCneeded = TWR1VelocityCurrent / 2 * TWR1HCtime; //same^
+                    //        if (TWR1HCneeded > TWR1HCDistToTarget)//same^
+                    //        {
+                    //            TWR1HCFullThrustUp = false; //closing on target, go to variable thrust
+                    //        }
+                    //    }
+                    //    else if (!TWR1HCFullThrustUp) //we were in variable thrust last frame
+                    //    {
 
-                                TWR1VelocitySetpoint = TWR1GravForce * .25; //"variable" thrust, slow as we are approaching target height
-                            }
-                        }
+                    //        TWR1HCtime = TWR1VelocityCurrent / Math.Abs(TWR1HC5Thrust); //goto full thrust?
+                    //        TWR1HCneeded = TWR1VelocityCurrent / 2 * TWR1HCtime;//same^
+                    //        if (TWR1HCneeded < TWR1HCDistToTarget)//same^
+                    //        {
+                    //            TWR1HCFullThrustUp = true;//no longer near target, go full thrust
+                    //        }
+                    //    }
 
-                    }
-                    //TWR1HCFreePitch = 0;
+
+                    //    if (TWR1HeightCtrl) //set thust
+                    //    {
+                    //        if (TWR1HCFullThrustUp) //in full thrust?
+                    //        {
+
+                    //            TWR1VelocitySetpoint = TWR1HC80Thrust + TWR1VelocityCurrent; //need to add velocity so vertical acceleration happens, limit to 80%  for wiggle room
+                    //        }
+                    //        else
+                    //        {
+
+                    //            TWR1VelocitySetpoint = TWR1GravForce * .25; //"variable" thrust, slow as we are approaching target height
+                    //        }
+                    //    }
+
+                    //}
+                    ////TWR1HCFreePitch = 0;
                     TWR1HCOrbitDrop = false; //error trap, below target height so we can't be orbit dropping
                 }
                 else//vessel above target height
                 { //vessel above target height, this is second so it is part of the else statement so if the math goes wonky the engine should burn high
-                    if (TWR1HCDistToTarget < (TWR1GravForce * 2)) //are we within gravforce as velocity as distance?
+                    if (TWR1HCDistToTarget < TWR1GravForce * 3)
                     {
-
-                        if (TWR1HeightCtrl)
-                        {
-                            TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .3, (TWR1HCDistToTarget * .3)) * -1); //just above target height, set velocity to lesser of 1.5 gravity or 1/3 distance to target
-                        }
-
-                        //TWR1HCFreePitch = 0;
-
-                        TWR1HCOrbitDrop = false;
-                    }
-                    else if (TWR1HCDistToTarget < (TWR1GravForce * 10)) //are we within gravforce as velocity as distance?
-                    {
-
-                        if (TWR1HeightCtrl)
-                        {
-                            TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .3)) * -1); //just above target height, set velocity to lesser of half gravity or 1/3 distance to target
-                        }
-
-                        //TWR1HCFreePitch = 0;
-
-                        TWR1HCOrbitDrop = false;
+                        TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .5)) * -1);
                     }
 
-                    else if (TWR1VelocityCurrent > 0) //above target height with positive velocity
+                    else
                     {
-
-                        if (TWR1HeightCtrl)
-                        {
-                            TWR1VelocitySetpoint = TWR1HC1Thrust; //cut engine
-                        }
-
-
+                        TWR1VelocitySetpoint = (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 2)) * Math.Abs(TWR1HC80Thrust))) * -1.2;
                     }
-                    else //above target height with negative velocity
-                    {
-                        TWR1HCtime = Math.Abs(TWR1VelocityCurrent) / TWR1HC80Thrust; //time to target height?
-                        TWR1HCneeded = Math.Abs(TWR1VelocityCurrent) / 2f * TWR1HCtime; //altitude needed
+                   // double DistToStop = (TWR1VelocityCurrent * (TWR1VelocityCurrent / TWR1HC80Thrust)) / 2;
+                                            //TWR1VelocitySetpoint = (Math.Sqrt(TWR1HCDistToTarget * Math.Abs(TWR1HC80Thrust) * 2)) * -1;
 
-                        if (TWR1HCneeded > TWR1HCDistToTarget) //below height needed?
-                        {
+                    //if (TWR1HCDistToTarget < TWR1GravForce) //are we within gravforce as velocity as distance?
+                    //{
 
 
-                            if (TWR1HeightCtrl)
-                            {
-                                TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .25, TWR1HC80Thrust) * -1; //set to 1/4 gravity or 80% thrust, whichever is lesser
-                            }
-                            TWR1HCOrbitDrop = false;
-                        }
-                        else
-                        {
-
-                            if (TWR1HeightCtrl)
-                            {
-
-                                if (TWR1VesselPitch >= 80) //less then 10 degress off vertical
-                                {
-                                    TWR1VelocitySetpoint = -100000f;//cut engines so no fuel used
-                                }
-                                else
-                                {
-                                    TWR1VelocitySetpoint = TWR1HC1Thrust + TWR1VelocityCurrent; //greater then 10 degrees off vertical, activate engines
-                                }
-                            }
-                        }
+                    //    TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .5)) * -1); //just above target height, set velocity to lesser of 1.5 gravity or 1/3 distance to target
 
 
-                    }
+                    //    //TWR1HCFreePitch = 0;
+
+                    //    //TWR1HCOrbitDrop = false;
+                    //}
+                    //else
+                    //{
+                    //    double DistToStop = Math.Sqrt(TWR1VelocityCurrent) / (2 * TWR1HC80Thrust);
+                    //    if (DistToStop * 1.05 > TWR1HCDistToTarget)
+                    //    {
+                    //        TWR1VelocitySetpoint = Math.Sqrt(2 * Math.Abs(TWR1HC80Thrust) * TWR1HCDistToTarget) * -1;
+                    //    }
+                    //    else
+                    //    {
+                    //        TWR1VelocitySetpoint = TWR1GravForce * -1.5;
+                    //    }
+                    //}
+                    //else if (TWR1HCDistToTarget < (TWR1GravForce * 10)) //are we within gravforce as velocity as distance?
+                    //{
+
+                    //    if (TWR1HeightCtrl)
+                    //    {
+                    //        TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .3)) * -1); //just above target height, set velocity to lesser of half gravity or 1/3 distance to target
+                    //    }
+
+                    //    //TWR1HCFreePitch = 0;
+
+                    //    TWR1HCOrbitDrop = false;
+                    //}
+
+                    //else if (TWR1VelocityCurrent > 0) //above target height with positive velocity
+                    //{
+
+                    //    if (TWR1HeightCtrl)
+                    //    {
+                    //        TWR1VelocitySetpoint = TWR1HC1Thrust; //cut engine
+                    //    }
+
+
+                    //}
+                    //else //above target height with negative velocity
+                    //{
+                    //    TWR1HCtime = Math.Abs(TWR1VelocityCurrent) / TWR1HC80Thrust; //time to target height?
+                    //    TWR1HCneeded = Math.Abs(TWR1VelocityCurrent) / 2f * TWR1HCtime; //altitude needed
+
+                    //    if (TWR1HCneeded > TWR1HCDistToTarget) //below height needed?
+                    //    {
+
+
+                    //        if (TWR1HeightCtrl)
+                    //        {
+                    //            TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .25, TWR1HC80Thrust) * -1; //set to 1/4 gravity or 80% thrust, whichever is lesser
+                    //        }
+                    //        TWR1HCOrbitDrop = false;
+                    //    }
+                    //    else
+                    //    {
+
+                    //        if (TWR1HeightCtrl)
+                    //        {
+
+                    //            if (TWR1VesselPitch >= 80) //less then 10 degress off vertical
+                    //            {
+                    //                TWR1VelocitySetpoint = -100000f;//cut engines so no fuel used
+                    //            }
+                    //            else
+                    //            {
+                    //                TWR1VelocitySetpoint = TWR1HC1Thrust + TWR1VelocityCurrent; //greater then 10 degrees off vertical, activate engines
+                    //            }
+                    //        }
+                    //    }
+
+
+                    //}
 
                 }
             }
