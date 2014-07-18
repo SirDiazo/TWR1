@@ -1044,7 +1044,7 @@ namespace VerticalVelocity
             {
                 TWR1HeightControl(); //Height control now sets VelocitySetpoint (version 1.5)
             }
-            print("Velocity setpoint " + TWR1VelocitySetpoint + " " +TWR1HC80Thrust + " " +TWR1GravForce);
+            //print("Velocity setpoint " + TWR1VelocitySetpoint + " " +TWR1HC80Thrust + " " +TWR1GravForce);
 
 
             if (TWR1HC80Thrust <= 0 && TWR1HeightCtrl == true || TWR1HC1Thrust >= 0 && TWR1HeightCtrl == true) //is height control on and 1% or 80% no longer valid?
@@ -1109,7 +1109,7 @@ namespace VerticalVelocity
             TWR1OrbitDropTimeNeeded = Math.Abs(TWR1VelocityCurrent) / Math.Abs(TWR1HC80Thrust); //how much time is needed to orbit drop?
             TWR1OrbitDropHeightNeeded = (Math.Abs(TWR1VelocityCurrent) * 40) + (TWR1HC80Thrust * Math.Pow(TWR1OrbitDropTimeNeeded, 2)) / 2; //how much altitude is needed to orbit drop?
 
-            if (TWR1HCDistToTarget > TWR1OrbitDropHeightNeeded && TWR1VelocityCurrent < 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget || TWR1VelocityCurrent >= 0f && TWR1HCDistToTarget > TWR1GravForce * 1000) //are we allowed to orbit drop right now? 
+            if (TWR1HCDistToTarget > TWR1OrbitDropHeightNeeded && TWR1VelocityCurrent < 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget || TWR1VelocityCurrent >= 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget) //are we allowed to orbit drop right now? 
             {
 
                 TWR1OrbitDropAllow = true;
@@ -1178,7 +1178,7 @@ namespace VerticalVelocity
 
                     if (TWR1HCDistToTarget < TWR1GravForce * 3)
                     {
-                        TWR1VelocitySetpoint = Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .5));
+                        TWR1VelocitySetpoint = Math.Min(TWR1GravForce, (TWR1HCDistToTarget)*.7);
                     }
 
                     else
@@ -1262,14 +1262,20 @@ namespace VerticalVelocity
                 }
                 else//vessel above target height
                 { //vessel above target height, this is second so it is part of the else statement so if the math goes wonky the engine should burn high
-                    if (TWR1HCDistToTarget < TWR1GravForce * 3)
+                    if (TWR1HCDistToTarget < TWR1GravForce * 4)
                     {
-                        TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .5)) * -1);
+                        //TWR1VelocitySetpoint = (Math.Min(TWR1GravForce * .5, (TWR1HCDistToTarget * .3)) * -1);
+                        TWR1VelocitySetpoint = TWR1HCDistToTarget * .3 * -1;
+                    }
+
+                    else if (TWR1HCDistToTarget < TWR1GravForce * 100)
+                    {
+                        TWR1VelocitySetpoint = (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 3.9)) * Math.Abs(TWR1HC80Thrust))) * -.6;
                     }
 
                     else
                     {
-                        TWR1VelocitySetpoint = (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 2)) * Math.Abs(TWR1HC80Thrust))) * -1.2;
+                        TWR1VelocitySetpoint = (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4;
                     }
                    // double DistToStop = (TWR1VelocityCurrent * (TWR1VelocityCurrent / TWR1HC80Thrust)) / 2;
                                             //TWR1VelocitySetpoint = (Math.Sqrt(TWR1HCDistToTarget * Math.Abs(TWR1HC80Thrust) * 2)) * -1;
