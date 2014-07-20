@@ -57,7 +57,11 @@ namespace VerticalVelocity
         private static Rect TWR1WinPos = new Rect(100, 100, 195, 80); //window size
         private int TWR1WinPosHeight = 100;
         private int TWR1WinPosWidth = 100;
+        private static GUISkin TWR1Skin;
         private static GUIStyle TWR1WinStyle = null; //window style
+        private static GUIStyle TWR1LblStyle = null; //window style
+        private static GUIStyle TWR1BtnStyle = null; //window style
+        private static GUIStyle TWR1FldStyle = null; //window style
         private bool TWR1HeightCtrl = false; //control to height engaged?
         private double TWR1HCtime = 1f; //Time for Height Control Mode
         private double TWR1HC80Thrust; //80% thrust accel
@@ -198,8 +202,51 @@ namespace VerticalVelocity
 
                 }
             }
-
-            TWR1WinStyle = new GUIStyle(HighLogic.Skin.window); //GUI skin style
+            TWR1Skin = (GUISkin)MonoBehaviour.Instantiate(HighLogic.Skin);
+            TWR1WinStyle = new GUIStyle(TWR1Skin.window); //GUI skin style
+            TWR1LblStyle = new GUIStyle(TWR1Skin.label);
+            TWR1FldStyle = new GUIStyle(TWR1Skin.textField);
+            TWR1FldStyle.fontStyle = FontStyle.Normal;
+            TWR1FldStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+            //Font fontTest = Font("calibri");
+            //TWR1LblStyle.font = UnityEngine.Font("calibri");
+            TWR1LblStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+            TWR1LblStyle.wordWrap = false;
+            TWR1BtnStyle = new GUIStyle(TWR1Skin.button);
+            TWR1BtnStyle.fontStyle = FontStyle.Normal;
+            TWR1BtnStyle.alignment = TextAnchor.MiddleCenter;
+            //TWR1BtnStyle.normal.
+           // print(TWR1BtnStyle.normal.background);
+            //print(HighLogic.Skin.font);
+            
+            //TWR1WinStyle = new GUIStyle();
+            //TWR1WinStyle.alignment = HighLogic.Skin.window.alignment;
+            //TWR1WinStyle.border = HighLogic.Skin.window.border;
+            //TWR1WinStyle.clipOffset = HighLogic.Skin.window.clipOffset;
+            //TWR1WinStyle.clipping = HighLogic.Skin.window.clipping;
+            //TWR1WinStyle.contentOffset = HighLogic.Skin.window.contentOffset;
+            //TWR1WinStyle.fixedHeight = HighLogic.Skin.window.fixedHeight;
+            //TWR1WinStyle.fixedWidth = HighLogic.Skin.window.fixedWidth;
+            //TWR1WinStyle.focused = HighLogic.Skin.window.focused;
+            //TWR1WinStyle.font = HighLogic.Skin.window.font;
+            //TWR1WinStyle.fontSize = HighLogic.Skin.window.fontSize;
+            //TWR1WinStyle.fontStyle = HighLogic.Skin.window.fontStyle;
+            //TWR1WinStyle.hover = HighLogic.Skin.window.hover;
+            //TWR1WinStyle.imagePosition = HighLogic.Skin.window.imagePosition;
+            //TWR1WinStyle.margin = HighLogic.Skin.window.margin;
+            //TWR1WinStyle.name = "TWR1Style";
+            //TWR1WinStyle.normal = HighLogic.Skin.window.normal;
+            //TWR1WinStyle.onActive = HighLogic.Skin.window.onActive;
+            //TWR1WinStyle.onFocused = HighLogic.Skin.window.onFocused;
+            //TWR1WinStyle.onHover = HighLogic.Skin.window.onHover;
+            //TWR1WinStyle.onNormal = HighLogic.Skin.window.onNormal;
+            //TWR1WinStyle.overflow = HighLogic.Skin.window.overflow;
+            //TWR1WinStyle.padding = HighLogic.Skin.window.padding;
+            //TWR1WinStyle.richText = HighLogic.Skin.window.richText;
+            //TWR1WinStyle.stretchHeight = HighLogic.Skin.window.stretchHeight;
+            //TWR1WinStyle.stretchWidth = HighLogic.Skin.window.stretchWidth;
+            //TWR1WinStyle.wordWrap = HighLogic.Skin.window.wordWrap;
+            
             try
             {
                 TWR1WinPosHeight = Convert.ToInt32(TWR1Node.GetValue("TWR1WinY")); //get saved window position
@@ -301,6 +348,7 @@ namespace VerticalVelocity
             TWR1ContentColor = GUI.contentColor; //set defaults to reset them at end
             TWR1DefautTextAlign = GUI.skin.label.alignment; //same^
             TWR1DefaultTextFieldAlign = GUI.skin.textField.alignment;//same^
+            TWR1LblStyle.alignment = TextAnchor.MiddleLeft;
             if (TWR1SelectingKey) //are we selecting a new key binding?
             {
                 if (Event.current.keyCode != KeyCode.None) //wait for keypress
@@ -312,28 +360,28 @@ namespace VerticalVelocity
                     TWR1Node.SetValue("TWR1Key", TWR1KeyCodeString);//same^
                     TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");//same^
                 }
-                GUI.Label(new Rect(10, 30, 150, 25), "Press New Key"); //change GUI to indicate we are waiting for key press
-                if (GUI.Button(new Rect(110, 30, 100, 25), "Cancel")) //cancel key change
+                GUI.Label(new Rect(10, 30, 150, 25), "Press New Key",TWR1LblStyle); //change GUI to indicate we are waiting for key press
+                if (GUI.Button(new Rect(110, 30, 100, 25), "Cancel",TWR1BtnStyle)) //cancel key change
                 {
                     TWR1SelectingKey = false; 
                 }
             }
             else  //not selecting a new key so display normal settings window
             {
-                GUI.Label(new Rect(10, 30, 150, 25), "Key: " + TWR1KeyCode.ToString()); //current key and option to change
-                if (GUI.Button(new Rect(80, 30, 90, 25), "Change Key"))//select new key?
+                GUI.Label(new Rect(10, 30, 150, 25), "Key: " + TWR1KeyCode.ToString(),TWR1LblStyle); //current key and option to change
+                if (GUI.Button(new Rect(80, 30, 90, 25), "Change Key",TWR1BtnStyle))//select new key?
                 {
                     TWR1SelectingKey = true;
                 }
             }
-            GUI.Label(new Rect(10, 60, 150, 25), "Scycrane Mode:"); //skycrane mode settings
+            GUI.Label(new Rect(10, 60, 150, 25), "Scycrane Mode:",TWR1LblStyle); //skycrane mode settings
             
             if (TWR1Node.GetValue("TWR1KASDisable") == "false" && TWR1Node.GetValue("TWR1KASForce") == "false") //in auto, so green
             {
                 
                 GUI.contentColor = Color.green;
             }
-            if (GUI.Button(new Rect(10, 80, 57, 25), "Auto")) //change to auto mode
+            if (GUI.Button(new Rect(10, 80, 57, 25), "Auto",TWR1BtnStyle)) //change to auto mode
             {
                 foreach (AssemblyLoader.LoadedAssembly Asm in AssemblyLoader.loadedAssemblies) //run auto mode check
                 {
@@ -353,7 +401,7 @@ namespace VerticalVelocity
             {
                 GUI.contentColor = Color.green;
             }
-            if (GUI.Button(new Rect(67, 80, 57, 25), "On")) //force skycrane mode on
+            if (GUI.Button(new Rect(67, 80, 57, 25), "On",TWR1BtnStyle)) //force skycrane mode on
             {
                 TWR1Node.SetValue("TWR1KASDisable", "false"); //save change
                 TWR1Node.SetValue("TWR1KASForce", "true");//same^
@@ -364,7 +412,7 @@ namespace VerticalVelocity
             {
                 GUI.contentColor = Color.green;
             }
-            if (GUI.Button(new Rect(124, 80, 57, 25), "Off")) //force skycrane mode off
+            if (GUI.Button(new Rect(124, 80, 57, 25), "Off",TWR1BtnStyle)) //force skycrane mode off
             {
                 TWR1Node.SetValue("TWR1KASDisable", "true"); //save change
                 TWR1Node.SetValue("TWR1KASForce", "false");//same^
@@ -372,11 +420,13 @@ namespace VerticalVelocity
             }
             GUI.contentColor = TWR1ContentColor; //reset color
 
-            GUI.Label(new Rect(10, 110, 150, 25), "Velocity Step Size:");
+            GUI.Label(new Rect(10, 110, 150, 25), "Velocity Step Size:",TWR1LblStyle);
             TWR1SpeedStepString = TWR1SpeedStep.ToString(); //text box requires a string, not a number
-            GUI.skin.label.alignment = TextAnchor.MiddleRight; //these lines are for that conversion back and forth
-            GUI.skin.textField.alignment = TextAnchor.MiddleRight;//same^
-            TWR1SpeedStepString = GUI.TextField(new Rect(130, 110, 50, 25), TWR1SpeedStepString, 5);//same^
+            //GUI.skin.label.alignment = TextAnchor.MiddleRight; //these lines are for that conversion back and forth
+            TWR1LblStyle.alignment = TextAnchor.MiddleRight;
+            //GUI.skin.textField.alignment = TextAnchor.MiddleRight;//same^
+            TWR1FldStyle.alignment = TextAnchor.MiddleRight;
+            TWR1SpeedStepString = GUI.TextField(new Rect(130, 110, 50, 25), TWR1SpeedStepString, 5,TWR1FldStyle);//same^
             try //try converting characters in text box to string
             {
                 TWR1SpeedStep = (float)Convert.ToDecimal(TWR1SpeedStepString); //conversion ok, apply and save change
@@ -389,51 +439,55 @@ namespace VerticalVelocity
                 GUI.FocusControl(""); //non-number key was pressed, give focus back to ship control
             }
 
-            if (GUI.Button(new Rect(10, 140, 70, 25), "Direction")) //force skycrane mode off
+            if (GUI.Button(new Rect(10, 140, 70, 25), "Direction",TWR1BtnStyle)) //force skycrane mode off
             {
                 ShowLine();
             }
-            if (GUI.Button(new Rect(80, 140, 23, 20), "U")) //force skycrane mode off
+            if (GUI.Button(new Rect(80, 140, 23, 20), "U",TWR1BtnStyle)) //force skycrane mode off
             {
                 ControlDirection = 0;
                 rootTWR1Data.controlDirection = 0;
                 ShowLine();
             }
-            if (GUI.Button(new Rect(80, 160, 23, 20), "D")) //force skycrane mode off
+            if (GUI.Button(new Rect(80, 160, 23, 20), "D",TWR1BtnStyle)) //force skycrane mode off
             {
                 ControlDirection = 2;
                 rootTWR1Data.controlDirection = 2;
                 ShowLine();
             }
-            if (GUI.Button(new Rect(103, 140, 23, 25), "F")) //force skycrane mode off
+            if (GUI.Button(new Rect(103, 140, 23, 25), "F",TWR1BtnStyle)) //force skycrane mode off
             {
                 ControlDirection = 3;
                 rootTWR1Data.controlDirection = 3;
                 ShowLine();
             }
-            if (GUI.Button(new Rect(126, 140, 23, 25), "B")) //force skycrane mode off
+            if (GUI.Button(new Rect(126, 140, 23, 25), "B",TWR1BtnStyle)) //force skycrane mode off
             {
                 ControlDirection = 1;
                 rootTWR1Data.controlDirection = 1;
                 ShowLine();
             }
-            if (GUI.Button(new Rect(103, 160, 23, 25), "L")) //force skycrane mode off
+            if (GUI.Button(new Rect(103, 160, 23, 25), "L",TWR1BtnStyle)) //force skycrane mode off
             {
                 ControlDirection = 5;
                 rootTWR1Data.controlDirection = 5;
                 ShowLine();
             }
-            if (GUI.Button(new Rect(126, 160, 23, 25), "R")) //force skycrane mode off
+            if (GUI.Button(new Rect(126, 160, 23, 25), "R",TWR1BtnStyle)) //force skycrane mode off
             {
                 ControlDirection = 4;
                 rootTWR1Data.controlDirection = 4;
                 ShowLine();
             }
 
-            GUI.skin.textField.alignment = TWR1DefaultTextFieldAlign; //reset GUI skin stuff
-            GUI.skin.label.alignment = TWR1DefautTextAlign;//same^
+            //GUI.skin.textField.alignment = TWR1DefaultTextFieldAlign; //reset GUI skin stuff
+            TWR1FldStyle.alignment = TWR1DefaultTextFieldAlign;
+            //GUI.skin.label.alignment = TWR1DefautTextAlign;//same^
+            TWR1LblStyle.alignment = TWR1DefautTextAlign;
             GUI.contentColor = TWR1ContentColor;//same^
             GUI.DragWindow(); //window is draggable
+            GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+            GUI.skin.button.alignment = TextAnchor.MiddleLeft;
         }
 
         public void OnWindow(int WindowID) //main VertVel window
@@ -443,38 +497,40 @@ namespace VerticalVelocity
             TWR1ContentColor = GUI.contentColor; //grab defaults
             TWR1DefautTextAlign = GUI.skin.label.alignment;//same^
             TWR1DefaultTextFieldAlign = GUI.skin.textField.alignment;//same^
-            GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+            //GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+            TWR1LblStyle.alignment = TextAnchor.MiddleLeft;
 
-            GUI.Label(new Rect(10, 40, 150, 20), "Velocity Setpoint(m/s): ");
-            GUI.Label(new Rect(10, 25, 150, 20), "Current Velocity(m/s): ");
-            GUI.skin.label.alignment = TextAnchor.MiddleRight;
-            GUI.Label(new Rect(145, 25, 60, 20), TWR1VelocityCurrent.ToString("##0.00"));
+            GUI.Label(new Rect(10, 40, 150, 20), "Velocity Setpoint(m/s): ",TWR1LblStyle);
+            GUI.Label(new Rect(10, 25, 150, 20), "Current Velocity(m/s): ",TWR1LblStyle);
+            //GUI.skin.label.alignment = TextAnchor.MiddleRight;
+            TWR1LblStyle.alignment = TextAnchor.MiddleRight;
+            GUI.Label(new Rect(145, 25, 60, 20), TWR1VelocityCurrent.ToString("##0.00"),TWR1LblStyle);
             //velocity setpoint value changes format depending on mode
             if (TWR1HeightCtrl) //in height control mode, display "Auto"
             {
-                GUI.Label(new Rect(145, 40, 60, 20), "Auto");
+                GUI.Label(new Rect(145, 40, 60, 20), "Auto",TWR1LblStyle);
             }
             else if (TWR1Engaged) //in velocity control, display velocity setpoint
             {
-                GUI.Label(new Rect(145, 40, 60, 20), TWR1VelocitySetpoint.ToString("##0.00"));
+                GUI.Label(new Rect(145, 40, 60, 20), TWR1VelocitySetpoint.ToString("##0.00"),TWR1LblStyle);
             }
             else //mod off, display "---.--"
             {
-                GUI.Label(new Rect(145, 40, 60, 20), "---.--");
+                GUI.Label(new Rect(145, 40, 60, 20), "---.--",TWR1LblStyle);
             }
-            if (GUI.Button(new Rect(7, 65, 50, 40), "Off")) //button to turn mod off
+            if (GUI.Button(new Rect(7, 65, 50, 40), "Off",TWR1BtnStyle)) //button to turn mod off
             {
                 TWR1Engaged = false;
                 TWR1HeightCtrl = false;
 
             }
-            if (GUI.Button(new Rect(57, 65, 50, 40), "Zero\nVel.")) //button to zero velocity
+            if (GUI.Button(new Rect(57, 65, 50, 40), "Zero\nVel.",TWR1BtnStyle)) //button to zero velocity
             {
                 TWR1Engaged = true;
                 TWR1HeightCtrl = false;
                 TWR1VelocitySetpoint = 0f;
             }
-            if (GUI.Button(new Rect(107, 65, 50, 40), "+"+ TWR1SpeedStep)) //button to increase velocity, display value of change (SpeedStep)
+            if (GUI.Button(new Rect(107, 65, 50, 40), "+"+ TWR1SpeedStep,TWR1BtnStyle)) //button to increase velocity, display value of change (SpeedStep)
             {
                 if (TWR1Engaged) //if mod is engaged already, add speedstep to velocity setpoint
                 {
@@ -489,7 +545,7 @@ namespace VerticalVelocity
                 }
             }
 
-            if (GUI.Button(new Rect(157, 65, 50, 40), "-" + TWR1SpeedStep))//button to decrease velocity, display value of change (SpeedStep)
+            if (GUI.Button(new Rect(157, 65, 50, 40), "-" + TWR1SpeedStep,TWR1BtnStyle))//button to decrease velocity, display value of change (SpeedStep)
             {
                 if (TWR1Engaged)//if mod is engaged already, subtract speedstep from velocity setpoint
                 {
@@ -508,22 +564,25 @@ namespace VerticalVelocity
             if (TWR1HC1Thrust >= 0f) //1% thrust is a TWR of greater then 1, probably SRBs. Can not enable Height Control
             {
                 GUI.contentColor = Color.red;
-                GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-                GUI.Label(new Rect(107, 110, 100, 40), "TWR\nHIGH");
+                //GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+                TWR1LblStyle.alignment = TextAnchor.MiddleCenter;
+                GUI.Label(new Rect(107, 110, 100, 40), "TWR\nHIGH",TWR1LblStyle);
                 GUI.contentColor = TWR1ContentColor;
             }
             else if (TWR1HC80Thrust <= 0f) //80% thrust is not a TWR of greater then 1. Can not enable Height Control
             {
                 GUI.contentColor = Color.red;
-                GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-                GUI.Label(new Rect(107, 110, 100, 40), "TWR\nLOW");
+                //GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+                TWR1LblStyle.alignment = TextAnchor.MiddleCenter;
+                GUI.Label(new Rect(107, 110, 100, 40), "TWR\nLOW",TWR1LblStyle);
                 GUI.contentColor = TWR1ContentColor;
             }
             else if (TWR1VesselPitch <= 55f && TWR1HCOrbitDrop == false && TWR1Engaged == true) //vessel is angled a long way off vertical, warn player mod may not work
             {
                 GUI.contentColor = Color.yellow;
-                GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-                GUI.Label(new Rect(107, 110, 100, 40), "OVER\nPITCH");
+                //GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+                TWR1LblStyle.alignment = TextAnchor.MiddleCenter;
+                GUI.Label(new Rect(107, 110, 100, 40), "OVER\nPITCH",TWR1LblStyle);
                 GUI.contentColor = TWR1ContentColor;
             }
             else if (TWR1HeightCtrl) //are we in height control mode?
@@ -533,22 +592,24 @@ namespace VerticalVelocity
                     if (TWR1HCThrustWarningTime == 0) //have not hit ThrustWarning altitude yet
                     {
                         GUI.contentColor = Color.green;
-                        GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-                        GUI.Label(new Rect(107, 110, 100, 40), "Free\nPitch");
+                        //GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+                        TWR1LblStyle.alignment = TextAnchor.MiddleCenter;
+                        GUI.Label(new Rect(107, 110, 100, 40), "Free\nPitch",TWR1LblStyle);
                         GUI.contentColor = TWR1ContentColor;
                     }
                     else if (TWR1HCThrustWarningTime != 0) //hit ThrustWarning altitude, warn player they have to upright their ship
                     {
                         GUI.contentColor = Color.yellow;
-                        GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-                        GUI.Label(new Rect(107, 110, 100, 40), "THRUST\nWARNING");
+                        //GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+                        TWR1LblStyle.alignment = TextAnchor.MiddleCenter;
+                        GUI.Label(new Rect(107, 110, 100, 40), "THRUST\nWARNING",TWR1LblStyle);
                         GUI.contentColor = TWR1ContentColor;
                     }
                 }
                 else //orbit drop is not in progress, height control mode engaged
                 {
                     GUI.contentColor = Color.green;
-                    if (GUI.Button(new Rect(107, 110, 100, 40), "In\nAuto"))
+                    if (GUI.Button(new Rect(107, 110, 100, 40), "In\nAuto",TWR1BtnStyle))
                     {
                         TWR1HeightCtrl = false;
                         TWR1VelocitySetpoint = 0f;
@@ -563,7 +624,7 @@ namespace VerticalVelocity
             {
                 if (TWR1OrbitDropAllow == true) //can enter orbitdrop mode
                 {
-                    if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height\n(Free)"))
+                    if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height\n(Free)",TWR1BtnStyle))
                     {
                         TWR1HeightCtrl = true;
                         TWR1Engaged = true;
@@ -574,7 +635,7 @@ namespace VerticalVelocity
                 }
                 else //too low for orbit drop, but can enter normal height control mode
                 {
-                    if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height\n(Now)"))
+                    if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height\n(Now)",TWR1BtnStyle))
                     {
                         TWR1HeightCtrl = true;
                         TWR1Engaged = true;
@@ -584,23 +645,27 @@ namespace VerticalVelocity
             }
 
 
-            GUI.skin.label.alignment = TextAnchor.MiddleLeft;
-            GUI.Label(new Rect(7, 110, 50, 20), "Altitude:");
-            GUI.skin.label.alignment = TextAnchor.MiddleRight;
+            //GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+            TWR1LblStyle.alignment = TextAnchor.MiddleLeft;
+            GUI.Label(new Rect(7, 110, 50, 20), "Altitude:",TWR1LblStyle);
+            //GUI.skin.label.alignment = TextAnchor.MiddleRight;
+            TWR1LblStyle.alignment = TextAnchor.MiddleRight;
             if (TWR1HCToGround > 50000) //are we really high? disaply orbit due to character limit concerns
             {
-                GUI.Label(new Rect(47, 110, 49, 20), "Orbit");
+                GUI.Label(new Rect(47, 110, 49, 20), "Orbit", TWR1LblStyle);
             }
             else
             {
-                GUI.Label(new Rect(47, 110, 49, 20), TWR1HCToGround.ToString("#####0"));
+                GUI.Label(new Rect(47, 110, 49, 20), TWR1HCToGround.ToString("#####0"),TWR1LblStyle);
             }
-            GUI.skin.label.alignment = TextAnchor.MiddleLeft;
-            GUI.Label(new Rect(7, 130, 40, 20), "Fly to:"); //fly to altitude, GUI text box requires string, not number
+            //GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+            TWR1LblStyle.alignment = TextAnchor.MiddleLeft;
+            GUI.Label(new Rect(7, 130, 40, 20), "Fly to:",TWR1LblStyle); //fly to altitude, GUI text box requires string, not number
             TWR1HCTargetString = TWR1HCTarget.ToString();//same^
             GUI.skin.label.alignment = TextAnchor.MiddleRight;
-            GUI.skin.textField.alignment = TextAnchor.MiddleRight;
-            TWR1HCTargetString = GUI.TextField(new Rect(47, 130, 50, 20), TWR1HCTargetString, 5);//same^
+            //GUI.skin.textField.alignment = TextAnchor.MiddleRight;
+            TWR1FldStyle.alignment = TextAnchor.MiddleRight;
+            TWR1HCTargetString = GUI.TextField(new Rect(47, 130, 50, 20), TWR1HCTargetString, 5,TWR1FldStyle);//same^
             try//same^
             {
                 TWR1HCTarget = Convert.ToInt32(TWR1HCTargetString); //convert string to number
@@ -614,7 +679,7 @@ namespace VerticalVelocity
             //bottom button displaying mode mod is in
             if (!TWR1VesselActive)
             {
-                if (GUI.Button(new Rect(10, 153, 175, 25), "No Active Vessel"))
+                if (GUI.Button(new Rect(10, 153, 175, 25), "No Active Vessel",TWR1BtnStyle))
                 {
                     TWR1HeightCtrl = false;
                     TWR1Engaged = false;
@@ -624,51 +689,61 @@ namespace VerticalVelocity
 
             else if (TWR1HeightCtrl)
             {
+                TWR1BtnStyle.fontStyle = FontStyle.Bold;
                 GUI.contentColor = Color.green;
-                if (GUI.Button(new Rect(10, 153, 175, 25), "Height Control Engaged"))
+                if (GUI.Button(new Rect(10, 153, 175, 25), "Height Control",TWR1BtnStyle))
                 {
                     TWR1HeightCtrl = false;
                 }
                 GUI.contentColor = TWR1ContentColor;
+                TWR1BtnStyle.fontStyle = FontStyle.Normal;
             }
             else if (TWR1Engaged)
             {
+                TWR1BtnStyle.fontStyle = FontStyle.Bold;
                 GUI.contentColor = Color.green;
-                if (GUI.Button(new Rect(10, 153, 175, 25), "Velocity Control Engaged"))
+                if (GUI.Button(new Rect(10, 153, 175, 25), "Velocity Control",TWR1BtnStyle))
                 {
                     TWR1HeightCtrl = false;
                     TWR1Engaged = false;
                 }
                 GUI.contentColor = TWR1ContentColor;
+                TWR1BtnStyle.fontStyle = FontStyle.Normal;
             }
             else //if (!TWR1HCArmed)
             {
-
-                if (GUI.Button(new Rect(15, 153, 175, 25), "Control Off")) //text displayed changes if mod is out of date
+                TWR1BtnStyle.fontStyle = FontStyle.Bold;
+                if (GUI.Button(new Rect(10, 153, 175, 25), "Control Off",TWR1BtnStyle)) //text displayed changes if mod is out of date
                 {
                     TWR1Engaged = false;
                     TWR1Show = false;
                 }
+                TWR1BtnStyle.fontStyle = FontStyle.Normal;
 
             }
             
-            if(GUI.Button(new Rect(185,153,25,25), TWR1SettingsIcon)) //settings button
+            if(GUI.Button(new Rect(185,153,25,25), TWR1SettingsIcon,TWR1BtnStyle)) //settings button
             {
                 TWR1SettingsShow = !TWR1SettingsShow;
                 TWR1SettingsWin.x = TWR1WinPos.x + 218;
                 TWR1SettingsWin.y = TWR1WinPos.y;
             }
 
-            GUI.skin.textField.alignment = TWR1DefaultTextFieldAlign; //reset text defaults
-            GUI.skin.label.alignment = TWR1DefautTextAlign; //same^
+            //GUI.skin.textField.alignment = TWR1DefaultTextFieldAlign; //reset text defaults
+            TWR1FldStyle.alignment = TWR1DefaultTextFieldAlign;
+            //GUI.skin.label.alignment = TWR1DefautTextAlign; //same^
+            TWR1LblStyle.alignment = TWR1DefautTextAlign;
             GUI.contentColor = TWR1ContentColor;//same^
             GUI.DragWindow(); //window is draggable
+            GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+                GUI.skin.button.alignment = TextAnchor.MiddleLeft;
 
         }
 
         public void Update()
         {
 
+            //print(HighLogic.Skin.font);
             if (timerElapsed)
             {
                 HideLine();
@@ -869,7 +944,7 @@ namespace VerticalVelocity
             {
                 TWR1HCOrbitDrop = false; //Height control not engaged, we can not be doing an OrbitDrop
 
-                TWR1HCFullThrustUp = false;
+                //TWR1HCFullThrustUp = false;
             }
 
             TWR1Vessel = FlightGlobals.ActiveVessel; //Set vessel to active vessel
@@ -1109,7 +1184,11 @@ namespace VerticalVelocity
             TWR1OrbitDropTimeNeeded = Math.Abs(TWR1VelocityCurrent) / Math.Abs(TWR1HC80Thrust); //how much time is needed to orbit drop?
             TWR1OrbitDropHeightNeeded = (Math.Abs(TWR1VelocityCurrent) * 40) + (TWR1HC80Thrust * Math.Pow(TWR1OrbitDropTimeNeeded, 2)) / 2; //how much altitude is needed to orbit drop?
 
-            if (TWR1HCDistToTarget > TWR1OrbitDropHeightNeeded && TWR1VelocityCurrent < 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget || TWR1VelocityCurrent >= 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget) //are we allowed to orbit drop right now? 
+            //if (TWR1HCDistToTarget > TWR1OrbitDropHeightNeeded && TWR1VelocityCurrent < 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget || TWR1VelocityCurrent >= 0f && TWR1HCDistToTarget > TWR1GravForce * 1000 && TWR1HCToGround > TWR1HCTarget) //are we allowed to orbit drop right now? 
+            // (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4;
+            //(TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10))
+            TWR1HCDistToTarget = Math.Abs(TWR1HCToGround - TWR1HCTarget);
+            if(TWR1HCToGround > TWR1HCTarget && TWR1VelocityCurrent > ((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 20))
             {
 
                 TWR1OrbitDropAllow = true;
@@ -1118,8 +1197,8 @@ namespace VerticalVelocity
             {
                 TWR1OrbitDropAllow = false;
             }
-           
 
+            //print("Drop " + TWR1HCToGround + " " + TWR1HCTarget + " " + TWR1VelocityCurrent + " " + (Math.Sqrt((TWR1HCDistToTarget - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4);
             if (TWR1Engaged == true) //control throttle?
             {
 
@@ -1140,7 +1219,7 @@ namespace VerticalVelocity
         public void TWR1HeightControl() //DesiredAccel must account for gravity in this method
         {
             
-            TWR1HCDistToTarget = Math.Abs(TWR1HCToGround - TWR1HCTarget); //how far to target? always positive
+            //TWR1HCDistToTarget = Math.Abs(TWR1HCToGround - TWR1HCTarget); //how far to target? always positive
 
             if (TWR1HCOrbitDrop) //are we orbit dropping?
             {
@@ -1161,7 +1240,8 @@ namespace VerticalVelocity
                     if (TWR1VelocityCurrent < 0f) //are we descending?
                     {
 
-                        if (TWR1OrbitDropHeightNeeded > TWR1HCDistToTarget) //is our current altitude below the altitude needed for height control?
+                        //if (TWR1OrbitDropHeightNeeded > TWR1HCDistToTarget) //is our current altitude below the altitude needed for height control?
+                        if(((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 15) > TWR1VelocityCurrent)
                         {
                             TWR1HCThrustWarningTime = TWR1Vessel.missionTime; //enter thrust warning mode
 
@@ -1450,11 +1530,15 @@ namespace VerticalVelocity
                                 firstRay = false;
                             }
                         }
+                       // print("Try okay");
                     }
                     catch
                     {
-                        landHeight = FlightGlobals.ActiveVessel.altitude;
+                        //landHeight = FlightGlobals.ActiveVessel.altitude;
+
+                        landHeight = FlightGlobals.ActiveVessel.heightFromTerrain;
                         firstRay = false;
+                        //print("try fail");
                     }
 
                 }
