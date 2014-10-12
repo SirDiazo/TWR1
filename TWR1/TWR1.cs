@@ -161,8 +161,9 @@ namespace VerticalVelocity
         
         public void Start() //Start runs on mod start, after all other mods loaded
         {
-            
-            
+
+
+            print("Vertical Veloctiy 1.14 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
@@ -353,14 +354,21 @@ namespace VerticalVelocity
             {
                 if (Event.current.keyCode != KeyCode.None) //wait for keypress
                 {
-                    TWR1KeyCode = Event.current.keyCode; //assign new key
+                    if (Event.current.keyCode == KeyCode.Escape)
+                    {
+                        TWR1KeyCode = KeyCode.None;
+                    }
+                    else
+                    {
+                        TWR1KeyCode = Event.current.keyCode; //assign new key
+                    }
                     
                     TWR1SelectingKey = false; //no longer selecting a new key binding
                     TWR1KeyCodeString = TWR1KeyCode.ToString(); //save new keybinding
                     TWR1Node.SetValue("TWR1Key", TWR1KeyCodeString);//same^
                     TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");//same^
                 }
-                GUI.Label(new Rect(10, 30, 150, 25), "Press New Key",TWR1LblStyle); //change GUI to indicate we are waiting for key press
+                GUI.Label(new Rect(10, 30, 150, 25), "Press New Key\nESC to unbind",TWR1LblStyle); //change GUI to indicate we are waiting for key press
                 if (GUI.Button(new Rect(110, 30, 100, 25), "Cancel",TWR1BtnStyle)) //cancel key change
                 {
                     TWR1SelectingKey = false; 
