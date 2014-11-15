@@ -163,7 +163,7 @@ namespace VerticalVelocity
         {
 
 
-            print("Vertical Veloctiy 1.14 Loaded");
+            print("Vertical Veloctiy 1.15 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
@@ -391,6 +391,7 @@ namespace VerticalVelocity
             }
             if (GUI.Button(new Rect(10, 80, 57, 25), "Auto",TWR1BtnStyle)) //change to auto mode
             {
+                TWR1KASDetect = false;
                 foreach (AssemblyLoader.LoadedAssembly Asm in AssemblyLoader.loadedAssemblies) //run auto mode check
                 {
                     if (Asm.dllName == "KAS")
@@ -411,6 +412,7 @@ namespace VerticalVelocity
             }
             if (GUI.Button(new Rect(67, 80, 57, 25), "On",TWR1BtnStyle)) //force skycrane mode on
             {
+                TWR1KASDetect = true;
                 TWR1Node.SetValue("TWR1KASDisable", "false"); //save change
                 TWR1Node.SetValue("TWR1KASForce", "true");//same^
                 TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");//same^
@@ -422,6 +424,7 @@ namespace VerticalVelocity
             }
             if (GUI.Button(new Rect(124, 80, 57, 25), "Off",TWR1BtnStyle)) //force skycrane mode off
             {
+                TWR1KASDetect = false;
                 TWR1Node.SetValue("TWR1KASDisable", "true"); //save change
                 TWR1Node.SetValue("TWR1KASForce", "false");//same^
                 TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");//same^
@@ -655,7 +658,17 @@ namespace VerticalVelocity
 
             //GUI.skin.label.alignment = TextAnchor.MiddleLeft;
             TWR1LblStyle.alignment = TextAnchor.MiddleLeft;
-            GUI.Label(new Rect(7, 110, 50, 20), "Altitude:",TWR1LblStyle);
+            if (TWR1Vessel.Landed)
+            {
+                Color txtClr = TWR1LblStyle.normal.textColor;
+                TWR1LblStyle.normal.textColor = Color.green;
+                GUI.Label(new Rect(7, 110, 50, 20), "LANDED", TWR1LblStyle);
+                TWR1LblStyle.normal.textColor = txtClr;
+            }
+            else
+            {
+                GUI.Label(new Rect(7, 110, 50, 20), "Altitude:", TWR1LblStyle);
+            }
             //GUI.skin.label.alignment = TextAnchor.MiddleRight;
             TWR1LblStyle.alignment = TextAnchor.MiddleRight;
             if (TWR1HCToGround > 50000) //are we really high? disaply orbit due to character limit concerns
@@ -859,7 +872,10 @@ namespace VerticalVelocity
 
             }
 
-
+            //foreach (Part p in FlightGlobals.ActiveVessel.Parts)
+            //{
+            //    print("Landed= " + p.Landed + " " + p.name);
+            //}
         }
 
 
@@ -1118,7 +1134,15 @@ namespace VerticalVelocity
             //        TWR1HCToGround = (float)TWR1Vessel.altitude;
             //    }
             //}
-            TWR1HCToGround = heightToLand();
+            //TWR1HCToGround = heightToLand();
+            if (TWR1Vessel.mainBody.ocean)
+            {
+                TWR1HCToGround = Math.Min(FlightGlobals.ActiveVessel.altitude - FlightGlobals.ActiveVessel.pqsAltitude, FlightGlobals.ActiveVessel.altitude);
+            }
+            else
+            {
+                TWR1HCToGround = FlightGlobals.ActiveVessel.altitude - FlightGlobals.ActiveVessel.pqsAltitude;
+            }
 
             TWR1HC5Thrust = (Math.Max((TWR1MaxThrust * .05), TWR1MinThrust) / TWR1Mass) - TWR1GravForce; //accel at 5% thrust, makes sure engine is on to allow for ship horizontal speed adjustment. this outside HC method for UI dispaly
             TWR1HC1Thrust = (Math.Max((TWR1MaxThrust * .01), TWR1MinThrust) / TWR1Mass) - TWR1GravForce;
@@ -1467,7 +1491,7 @@ namespace VerticalVelocity
 
 
 
-            if (FlightGlobals.ActiveVessel.LandedOrSplashed) //if landed or splashed, height is 0
+            if (FlightGlobals.ActiveVessel.LandedOrSplashed && !TWR1KASDetect) //if landed or splashed, height is 0
             {
                 landHeight = 0;
             }
@@ -1487,75 +1511,115 @@ namespace VerticalVelocity
                     List<partDist> partHeights = new List<partDist>(); //only used above 50 parts, links part to distance to ground
                     foreach (Part p in FlightGlobals.ActiveVessel.Parts)
                     {
-                        partHeights.Add(new partDist() { prt = p, dist = Vector3.Distance(p.transform.position, FlightGlobals.ActiveVessel.mainBody.position) }); //create list of parts and their distance to ground
-                        //print("a: " + Vector3.Distance(p.transform.position, FlightGlobals.ActiveVessel.mainBody.position));
+                        
+                            partHeights.Add(new partDist() { prt = p, dist = Vector3.Distance(p.transform.position, FlightGlobals.ActiveVessel.mainBody.position) }); //create list of parts and their distance to ground
+                            //print("a: " + Vector3.Distance(p.transform.position, FlightGlobals.ActiveVessel.mainBody.position));
+                        
                     }
                     partHeights.Sort((i, j) => i.dist.CompareTo(j.dist)); //sort parts so parts closest to ground are at top of list
                     for (int i = 0; i < 30; i = i + 1)
                     {
-                        partToRay.Add(partHeights[i].prt); //make list of 30 parts closest to ground
-                        //print("b: " + i + " " + partHeights[i].prt.name + " " + partHeights[i].dist + " " + Vector3.Distance(FlightGlobals.ActiveVessel.CoM, FlightGlobals.ActiveVessel.mainBody.position));
+                        
+                            partToRay.Add(partHeights[i].prt); //make list of 30 parts closest to ground
+                            //print("b: " + i + " " + partHeights[i].prt.name + " " + partHeights[i].dist + " " + Vector3.Distance(FlightGlobals.ActiveVessel.CoM, FlightGlobals.ActiveVessel.mainBody.position));
+                        
                     }
 
                 }
+                bool rayCastComplete = false;
 
                 foreach (Part p in partToRay)
                 {
                     try
                     {
-                        if (p.collider.enabled) //only check part if it has collider enabled
-                        {
-                            Vector3 partEdge = p.collider.ClosestPointOnBounds(FlightGlobals.currentMainBody.position); //find collider edge closest to ground
-                            RaycastHit pHit;
-                            Ray pRayDown = new Ray(partEdge, FlightGlobals.currentMainBody.position);
-                            LayerMask pRayMask = 33792; //layermask does not ignore layer 0, why?
-                            if (Physics.Raycast(pRayDown, out pHit, (float)(FlightGlobals.ActiveVessel.mainBody.Radius + FlightGlobals.ActiveVessel.altitude), pRayMask)) //cast ray
+                        
+                            if (!rayCastComplete && TWR1KASDetect &&  (p.partName == "KAS_Winch1" || p.partName == "KAS_Winch2" || p.partName == "KAS_Winch3" || p.partName == "KAS_Winch4"))
                             {
-
-                                if (firstRay) //first ray this update, always set height to this
+                                print("Kas winch found");
+                                if (TWR1Vessel.mainBody.ocean)
                                 {
-
-                                    landHeight = pHit.distance;
-
-                                    firstRay = false;
+                                    landHeight = landHeight = Math.Min(landHeight, FlightGlobals.ActiveVessel.altitude - Math.Max(FlightGlobals.ActiveVessel.pqsAltitude, 0));
                                 }
                                 else
                                 {
+                                    landHeight = landHeight = Math.Min(landHeight, FlightGlobals.ActiveVessel.altitude - FlightGlobals.ActiveVessel.pqsAltitude);
+                                }
+                                firstRay = false;
+                                rayCastComplete = true;
+                            }
+                        
+                        else
+                        {
+                            if (p.collider.enabled) //only check part if it has collider enabled
+                            {
+                                Vector3 partEdge = p.collider.ClosestPointOnBounds(FlightGlobals.currentMainBody.position); //find collider edge closest to ground
+                                RaycastHit pHit;
+                                Ray pRayDown = new Ray(partEdge, FlightGlobals.currentMainBody.position);
+                                LayerMask pRayMask = 33792; //layermask does not ignore layer 0, why?
+                                if (Physics.Raycast(pRayDown, out pHit, (float)(FlightGlobals.ActiveVessel.mainBody.Radius + FlightGlobals.ActiveVessel.altitude), pRayMask)) //cast ray
+                                {
 
-                                    landHeight = Math.Min(landHeight, pHit.distance);
+                                    if (firstRay) //first ray this update, always set height to this
+                                    {
 
+                                        landHeight = pHit.distance;
+
+                                        firstRay = false;
+                                        rayCastComplete = true;
+                                    }
+                                    else
+                                    {
+
+                                        landHeight = Math.Min(landHeight, pHit.distance);
+                                        rayCastComplete = true;
+
+
+                                    }
+                                    //if (pHit.transform.gameObject.layer != 10 && pHit.transform.gameObject.layer != 15)  //Error trap, ray should only hit layers 10 and 15
+                                    //{
+                                    //    print(p.name + " " + pHit.transform.gameObject.layer + " " + pHit.collider.name + " " + pHit.distance);
+                                    //}
 
                                 }
-                                //if (pHit.transform.gameObject.layer != 10 && pHit.transform.gameObject.layer != 15)  //Error trap, ray should only hit layers 10 and 15
+                                //else if (!firstRay) //error trap, ray hit nothing   //no longer needed with rayCastComplete being added
                                 //{
-                                //    print(p.name + " " + pHit.transform.gameObject.layer + " " + pHit.collider.name + " " + pHit.distance);
+                                //    landHeight = FlightGlobals.ActiveVessel.altitude;
+                                //    firstRay = false;
                                 //}
-
+                                print("collider enable");
                             }
-                            else if (!firstRay) //error trap, ray hit nothing
-                            {
-                                landHeight = FlightGlobals.ActiveVessel.altitude;
-                                firstRay = false;
-                            }
+                            // print("Try okay");
                         }
-                       // print("Try okay");
                     }
                     catch
                     {
                         //landHeight = FlightGlobals.ActiveVessel.altitude;
 
-                        landHeight = FlightGlobals.ActiveVessel.heightFromTerrain;
-                        firstRay = false;
+                        //landHeight = FlightGlobals.ActiveVessel.heightFromTerrain;  //rayCastComplete now takes care of this
+                        //firstRay = false;
                         //print("try fail");
                     }
-
+                    print("Part height " + landHeight + " " + p.name);
                 }
-                if (landHeight < 1) //if we are in the air, always display an altitude of at least 1
+
+                if(!rayCastComplete)
+                {
+                    if (TWR1Vessel.mainBody.ocean)
+                    {
+                        landHeight = landHeight = Math.Min(landHeight, FlightGlobals.ActiveVessel.altitude - Math.Max(FlightGlobals.ActiveVessel.pqsAltitude, 0));
+                    }
+                    else
+                    {
+                        landHeight = landHeight = Math.Min(landHeight, FlightGlobals.ActiveVessel.altitude - FlightGlobals.ActiveVessel.pqsAltitude);
+                    }
+                }
+                
+                if (landHeight < 1 && TWR1KASDetect) //if we are in the air, always display an altitude of at least 1, but only if KAS not installed
                 {
                     landHeight = 1;
                 }
             }
-
+            
             if (FlightGlobals.ActiveVessel.mainBody.ocean) //if mainbody has ocean we land on water before the seabed
             {
                 if (landHeight > FlightGlobals.ActiveVessel.altitude)
@@ -1563,7 +1627,18 @@ namespace VerticalVelocity
                     landHeight = FlightGlobals.ActiveVessel.altitude;
                 }
             }
-
+            //if (landHeight < 1) //can't use vessel.landed due to KAS, did not work, use TWR1KASDetect
+            //{
+            //    if (landHeight < 0.1)
+            //    {
+            //        landHeight = 0;
+            //    }
+            //    else
+            //    {
+            //        landHeight = 1;
+            //    }
+            //}
+            
             return landHeight;
         }   
     }
