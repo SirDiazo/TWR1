@@ -22,6 +22,7 @@ namespace VerticalVelocity
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class TWR1 : MonoBehaviour
     {
+        ApplicationLauncherButton TWR1StockButton = null; //stock toolbar button instance
         private bool TWR1KeyDown = false; //Is the TWR1 being held down at the moment?
         private bool TWR1Engaged = false; //Is TWR1 (Thrust Weight Ratio 1) mod engaged and auto-controlling?
         private double TWR1ThrustUp = 0f; //thrust straight up needed for desired accel
@@ -127,6 +128,16 @@ namespace VerticalVelocity
 
         //}
 
+        public void DummyVoid()
+        {
+
+        }
+
+        public void onStockToolbarClick()
+        {
+            TWR1Show = !TWR1Show;
+        }
+
         public Vector3 SetDirection()
         {
             if (ControlDirection == 0)
@@ -163,7 +174,7 @@ namespace VerticalVelocity
         {
 
 
-            print("Vertical Veloctiy 1.15 Loaded");
+            print("Vertical Veloctiy 1.16a Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
@@ -277,8 +288,14 @@ namespace VerticalVelocity
                 TWR1Btn.ToolTip = "Vertical Velocity Control";
                 TWR1Btn.OnClick += (e) =>
                 {
-                    TWR1Show = !TWR1Show;
+                    onStockToolbarClick();
                 };
+            }
+            else
+            {
+                //AGXShow = true; //toolbar not installed, show AGX regardless
+                //now using stock toolbar as fallback
+                TWR1StockButton = ApplicationLauncher.Instance.AddModApplication(onStockToolbarClick, onStockToolbarClick, DummyVoid, DummyVoid, DummyVoid, DummyVoid, ApplicationLauncher.AppScenes.FLIGHT, (Texture)GameDatabase.Instance.GetTexture("Diazo/TWR1/icon_button", false));
             }
             showLineTime = new System.Timers.Timer(3000);
             //showLineTime.Interval = 3;
@@ -323,6 +340,10 @@ namespace VerticalVelocity
             if (ToolbarManager.ToolbarAvailable) //if toolbar loaded, destroy button on leaving flight scene
             {
                 TWR1Btn.Destroy();
+            }
+            else
+            {
+                ApplicationLauncher.Instance.RemoveModApplication(TWR1StockButton);
             }
             TWR1Node.SetValue("TWR1WinX", TWR1WinPos.x.ToString()); //save window position
             TWR1Node.SetValue("TWR1WinY", TWR1WinPos.y.ToString());//same^
