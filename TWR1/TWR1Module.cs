@@ -26,8 +26,10 @@ namespace VerticalVelocity
         public Vessel TWR1Vessel; //Our active vessel
         public double TWR1Mass = 0f; //Vessel's mass
         public double TWR1MassLast = 0;
-        public double TWR1MaxThrust = 0f; //Max thrust contolled by throttle
-        public double TWR1MinThrust = 0f; //Min thrust controlled by throttle, not necessarily zero if solid rocket boosters are firing
+        public double TWR1MaxThrust = 0f; //Max thrust contolled by throttle, modified by current vessel angle
+        public double TWR1MinThrust = 0f; //Min thrust controlled by throttle, not necessarily zero if solid rocket boosters are firing, modified by current vessel angle
+        public double TWR1MaxThrustVertical = 0f; //Max thrust if we are pefectly vertical
+        public double TWR1MinThrustVertical = 0f; //Min thrust controlled by throttle, not necessarily zero if solid rocket boosters are firing, if vessel is perfectly vertical
         public ModuleEngines TWR1EngineModule; //part of check for solid rocket booster
         public ModuleEnginesFX TWR1EngineModuleFX;
         public CelestialBody TWR1SOI; //what are we orbiting?
@@ -132,8 +134,11 @@ namespace VerticalVelocity
         public override void OnStart(StartState state)
         {
             //Debug.Log("TWR!START");
-            TWR1Vessel = this.part.vessel;
-            accelDiffQueue = new Queue<float>();
+            if (HighLogic.LoadedSceneIsFlight)
+            {
+                TWR1Vessel = this.part.vessel;
+                accelDiffQueue = new Queue<float>();
+            }
             //TWR1Vessel.OnPostAutopilotUpdate += ctrlState;
         }
 
@@ -155,108 +160,125 @@ namespace VerticalVelocity
 
         public void FixedUpdate() //forum says "all physics calculations should be on FixedUpdate, not Update". not sure a throttle adjustment qualifies as a physics calc, but put it here anyway
         {
-            TWR1VelocityCurrent = (float)TWR1Vessel.verticalSpeed; //set our current vertical velocity
-            if (TWR1Vessel.mainBody.ocean)
+            if (HighLogic.LoadedSceneIsFlight)
             {
-                TWR1HCToGround = Math.Min(TWR1Vessel.altitude - TWR1Vessel.pqsAltitude, TWR1Vessel.altitude);
-            }
-            else
-            {
-                TWR1HCToGround = TWR1Vessel.altitude - TWR1Vessel.pqsAltitude;
-            }
-            TWR1Mass = TWR1Vessel.GetTotalMass();
-            TWR1SOI = TWR1Vessel.mainBody;
-            TWR1CoM = TWR1Vessel.findWorldCenterOfMass();
-            TWR1Up = (TWR1CoM - TWR1Vessel.mainBody.position).normalized;
-            TWR1GravHeight = (float)TWR1Vessel.altitude + (float)TWR1SOI.Radius; //gravity force at this altitude (not in m/s^2)
-            TWR1GravForce = (float)TWR1SOI.gMagnitudeAtCenter / (float)Math.Pow(TWR1GravHeight, 2); //accel down due to gravity in m/s^2
-            TWR1MaxThrust = 0f; //maxthrust reset
-            TWR1MinThrust = 0f; //minthrust reset
-            actualThrustLastFrame = 0f; //thrust dif reset
-            foreach (Part part in TWR1Vessel.Parts) //go through each part on vessel
-            {
-                if (part.Modules.Contains("ModuleEngines") | part.Modules.Contains("ModuleEnginesFX")) //is part an engine?
+                TWR1VelocityCurrent = (float)TWR1Vessel.verticalSpeed; //set our current vertical velocity
+                if (TWR1Vessel.mainBody.ocean)
                 {
-                    float DavonThrottleID = 0;
-                    if (part.Modules.Contains("DifferentialThrustEngineModule")) //Devon Throttle Control Installed?
-                    {
-                        foreach (PartModule pm in part.Modules)
-                        {
-
-                            if (pm.moduleName == "DifferentialThrustEngineModule")
-                            {
-                                DavonThrottleID = (float)pm.Fields.GetValue("throttleFloatSelect"); //which throttle is engine assigned to?
-                            }
-                        }
-
-                    }
-                    //errLine = "3";
-                    if (DavonThrottleID == 0f)
-                    {
-                        foreach (PartModule TWR1PartModule in part.Modules) //change from part to partmodules
-                        {
-                            //errLine = "4";
-                            if (TWR1PartModule.moduleName == "ModuleEngines") //find partmodule engine on th epart
-                            {
-
-                                TWR1EngineModule = (ModuleEngines)TWR1PartModule; //change from partmodules to moduleengines
-                                // print("xform "+ TWR1EngineModule.thrustTransforms.Count + "||" + Vector3.Angle(TWR1EngineModule.thrustTransforms[0].forward,-TWR1Up));
-                                //print("TWR1 angle off" + Vector3.Angle(TWR1EngineModule.thrustTransforms[0].forward, TWR1Up));
-                                double offsetMultiplier = Math.Max(0, Math.Cos(Mathf.Deg2Rad * Vector3.Angle(TWR1EngineModule.thrustTransforms[0].forward, -TWR1Up)));
-                                
-                                //how far off vertical is this engine?
-                                //print("of " + offsetMultiplier);
-                                if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModule.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
-                                {
-                                    TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
-                                    TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust since this is an SRB
-                                }
-                                else if (TWR1EngineModule.isOperational)//we know it is an engine and not a solid rocket booster so:
-                                {
-                                    TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
-                                    TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
-
-                                }
-                                actualThrustLastFrame += (float)TWR1EngineModule.currentThrottle * (float)TWR1EngineModule.maxThrust * (float)offsetMultiplier;
-                            }
-                            else if (TWR1PartModule.moduleName == "ModuleEnginesFX") //find partmodule engine on th epart
-                            {
-                               // errLine = "5";
-                                TWR1EngineModuleFX = (ModuleEnginesFX)TWR1PartModule; //change from partmodules to moduleengines
-                                double offsetMultiplier = Math.Cos(Mathf.Deg2Rad * Vector3.Angle(TWR1EngineModuleFX.thrustTransforms[0].forward, -TWR1ControlUp)); //how far off vertical is this engine?
-                                if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModuleFX.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
-                                {
-                                    TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
-                                    TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust since this is an SRB
-                                }
-                                else if (TWR1EngineModuleFX.isOperational)//we know it is an engine and not a solid rocket booster so:
-                                {
-                                    TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
-                                    TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
-
-                                }
-                                actualThrustLastFrame += (float)TWR1EngineModule.currentThrottle * (float)TWR1EngineModule.maxThrust * (float)offsetMultiplier;
-                            }
-
-                        }
-                    }
+                    TWR1HCToGround = Math.Min(TWR1Vessel.altitude - TWR1Vessel.pqsAltitude, TWR1Vessel.altitude);
                 }
+                else
+                {
+                    TWR1HCToGround = TWR1Vessel.altitude - TWR1Vessel.pqsAltitude;
+                }
+                TWR1Mass = TWR1Vessel.GetTotalMass();
+                TWR1SOI = TWR1Vessel.mainBody;
+                TWR1CoM = TWR1Vessel.findWorldCenterOfMass();
+                TWR1Up = (TWR1CoM - TWR1Vessel.mainBody.position).normalized;
+                TWR1GravHeight = (float)TWR1Vessel.altitude + (float)TWR1SOI.Radius; //gravity force at this altitude (not in m/s^2)
+                TWR1GravForce = (float)TWR1SOI.gMagnitudeAtCenter / (float)Math.Pow(TWR1GravHeight, 2); //accel down due to gravity in m/s^2
+                TWR1MaxThrust = 0f; //maxthrust reset
+                TWR1MinThrust = 0f; //minthrust reset
+                TWR1MaxThrustVertical = 0f;
+                TWR1MinThrustVertical = 0f;
+                actualThrustLastFrame = 0f; //thrust dif reset
+                foreach (Part part in TWR1Vessel.Parts) //go through each part on vessel
+                {
+                    if (part.Modules.Contains("ModuleEngines") | part.Modules.Contains("ModuleEnginesFX")) //is part an engine?
+                    {
+                        float DavonThrottleID = 0;
+                        if (part.Modules.Contains("DifferentialThrustEngineModule")) //Devon Throttle Control Installed?
+                        {
+                            foreach (PartModule pm in part.Modules)
+                            {
 
-            }
-            TWR1HC5Thrust = (Math.Max((TWR1MaxThrust * .05), TWR1MinThrust) / TWR1Mass) - TWR1GravForce; //accel at 5% thrust, makes sure engine is on to allow for ship horizontal speed adjustment. this outside HC method for UI dispaly
-            TWR1HC1Thrust = (Math.Max((TWR1MaxThrust * .01), TWR1MinThrust) / TWR1Mass) - TWR1GravForce;
+                                if (pm.moduleName == "DifferentialThrustEngineModule")
+                                {
+                                    DavonThrottleID = (float)pm.Fields.GetValue("throttleFloatSelect"); //which throttle is engine assigned to?
+                                }
+                            }
 
-            //Debug.Log("startofit " + TWR1GravForce + "||" + TWR1Mass + "||" + TWR1MaxThrust);
-            TWR1HC80Thrust = ((TWR1MaxThrust * .8f) / TWR1Mass) - TWR1GravForce; //use 80% acceleration to account for being off vertical, planet grav reduces accel in this case this outside HC method for UI disaply
-            if (!TWR1Engaged) { TWR1HeightCtrl = false; } //mod has been disengegaed, disengage height control
-            if (!TWR1HeightCtrl)
-            {
-                TWR1HCOrbitDrop = false; //Height control not engaged, we can not be doing an OrbitDrop
-            }
-            TWR1ControlUp = SetDirection(controlDirection, TWR1Vessel);
-            if(TWR1Engaged)
-            {
-                TWR1Math();
+                        }
+                        //errLine = "3";
+                        if (DavonThrottleID == 0f)
+                        {
+                            foreach (PartModule TWR1PartModule in part.Modules) //change from part to partmodules
+                            {
+                                //errLine = "4";
+                                if (TWR1PartModule.moduleName == "ModuleEngines") //find partmodule engine on th epart
+                                {
+
+                                    TWR1EngineModule = (ModuleEngines)TWR1PartModule; //change from partmodules to moduleengines
+                                    // print("xform "+ TWR1EngineModule.thrustTransforms.Count + "||" + Vector3.Angle(TWR1EngineModule.thrustTransforms[0].forward,-TWR1Up));
+                                    //print("TWR1 angle off" + Vector3.Angle(TWR1EngineModule.thrustTransforms[0].forward, TWR1Up));
+                                    double offsetMultiplier = Math.Max(0, Math.Cos(Mathf.Deg2Rad * Vector3.Angle(TWR1EngineModule.thrustTransforms[0].forward, -TWR1Up)));
+
+                                    //how far off vertical is this engine?
+                                    //print("of " + offsetMultiplier);
+                                    if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModule.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
+                                    {
+                                        TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
+                                        TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                        TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust since this is an SRB
+                                        TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                    }
+                                    else if (TWR1EngineModule.isOperational)//we know it is an engine and not a solid rocket booster so:
+                                    {
+                                        TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
+                                        TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                        TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
+                                        TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                    }
+                                    actualThrustLastFrame += (float)TWR1EngineModule.currentThrottle * (float)TWR1EngineModule.maxThrust * (float)offsetMultiplier;
+                                }
+                                else if (TWR1PartModule.moduleName == "ModuleEnginesFX") //find partmodule engine on th epart
+                                {
+                                    // errLine = "5";
+                                    TWR1EngineModuleFX = (ModuleEnginesFX)TWR1PartModule; //change from partmodules to moduleengines
+                                    double offsetMultiplier = Math.Cos(Mathf.Deg2Rad * Vector3.Angle(TWR1EngineModuleFX.thrustTransforms[0].forward, -TWR1ControlUp)); //how far off vertical is this engine?
+                                    if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModuleFX.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
+                                    {
+                                        TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
+                                        TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                        TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust since this is an SRB
+                                        TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                    }
+                                    else if (TWR1EngineModuleFX.isOperational)//we know it is an engine and not a solid rocket booster so:
+                                    {
+                                        TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
+                                        TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                        TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
+                                        TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                    }
+                                    actualThrustLastFrame += (float)TWR1EngineModule.currentThrottle * (float)TWR1EngineModule.maxThrust * (float)offsetMultiplier;
+                                }
+
+                            }
+                        }
+                    }
+
+                }
+                TWR1HC5Thrust = (Math.Max((TWR1MaxThrustVertical * .05), TWR1MinThrustVertical) / TWR1Mass) - TWR1GravForce; //accel at 5% thrust, makes sure engine is on to allow for ship horizontal speed adjustment. this outside HC method for UI dispaly
+                TWR1HC1Thrust = (Math.Max((TWR1MaxThrustVertical * .01), TWR1MinThrustVertical) / TWR1Mass) - TWR1GravForce;
+
+                //Debug.Log("startofit " + TWR1GravForce + "||" + TWR1Mass + "||" + TWR1MaxThrust);
+                TWR1HC80Thrust = ((TWR1MaxThrustVertical * .8f) / TWR1Mass) - TWR1GravForce; //use 80% acceleration to account for being off vertical, planet grav reduces accel in this case this outside HC method for UI disaply
+                if (!TWR1Engaged) { TWR1HeightCtrl = false; } //mod has been disengegaed, disengage height control
+                if (!TWR1HeightCtrl)
+                {
+                    TWR1HCOrbitDrop = false; //Height control not engaged, we can not be doing an OrbitDrop
+                }
+                TWR1ControlUp = SetDirection(controlDirection, TWR1Vessel);
+                TWR1OrbitDropTimeNeeded = Math.Abs(Math.Min(0, TWR1VelocityCurrent)) / Math.Abs(TWR1HC80Thrust); //how much time is needed to orbit drop? if we are positive velocity, need zero time
+                //altitude needed to orbit drop, is time to stop our current velocity of zero or lower (use zero if moving upwards) plus 20 seconds of falling due to gravity
+                //TWR1OrbitDropHeightNeeded = (Math.Abs(TWR1VelocityCurrent) * 40) + (TWR1HC80Thrust * Math.Pow(TWR1OrbitDropTimeNeeded, 2)) / 2; //how much altitude is needed to orbit drop?
+                TWR1OrbitDropHeightNeeded = (Math.Pow(((Math.Abs(Math.Min(TWR1VelocityCurrent, 0))) + TWR1GravForce * 20), 2) / (2 * TWR1HC80Thrust)) + (TWR1GravForce * 200); //twr1gravforce * 200 is shortcut for D = (accel * time^2) /2 
+                //Debug.Log("heightneed " + TWR1OrbitDropHeightNeeded + "||" + TWR1VelocityCurrent + "||" + TWR1GravForce + "||" + TWR1HC80Thrust);
+                TWR1HCDistToTarget = Math.Abs(TWR1HCToGround - TWR1HCTarget);
+                if (TWR1Engaged)
+                {
+                    TWR1Math();
+                }
             }
         }
 
@@ -399,10 +421,9 @@ namespace VerticalVelocity
                 TWR1ThrustUp = Math.Max(Math.Min(TWR1ThrustUp, 1), 0); //error catch throttle value, if an invalid value is passed to KSP it screws up.
                 errLine = "13";
 
-                TWR1OrbitDropTimeNeeded = Math.Abs(TWR1VelocityCurrent) / Math.Abs(TWR1HC80Thrust); //how much time is needed to orbit drop?
-                TWR1OrbitDropHeightNeeded = (Math.Abs(TWR1VelocityCurrent) * 40) + (TWR1HC80Thrust * Math.Pow(TWR1OrbitDropTimeNeeded, 2)) / 2; //how much altitude is needed to orbit drop?
-                TWR1HCDistToTarget = Math.Abs(TWR1HCToGround - TWR1HCTarget);
-                if (TWR1HCToGround > TWR1HCTarget && TWR1VelocityCurrent > ((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 20))
+                
+                //if (TWR1HCToGround > TWR1HCTarget && TWR1HCDistToTarget > TWR1GravForce*100 && TWR1VelocityCurrent > ((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 20))
+                if (TWR1HCToGround > TWR1HCTarget && TWR1HCDistToTarget > TWR1OrbitDropHeightNeeded)
                 {
 
                     TWR1OrbitDropAllow = true;
@@ -519,11 +540,12 @@ namespace VerticalVelocity
                     {
 
                         //if (TWR1OrbitDropHeightNeeded > TWR1HCDistToTarget) //is our current altitude below the altitude needed for height control?
-                        if(((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 15) > TWR1VelocityCurrent)
+                        //if(((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 15) > TWR1VelocityCurrent)
+                        if (TWR1OrbitDropHeightNeeded > TWR1HCDistToTarget)
                         {
                             TWR1HCThrustWarningTime = TWR1Vessel.missionTime; //enter thrust warning mode
 
-
+                            Debug.Log("war " + TWR1HCThrustWarningTime + "|" + TWR1OrbitDropHeightNeeded + "||" + TWR1HCDistToTarget);
                         }
                     }
                 }

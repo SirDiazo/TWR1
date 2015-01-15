@@ -594,7 +594,7 @@ namespace VerticalVelocity
                             GUI.contentColor = Color.green;
                             //GUI.skin.label.alignment = TextAnchor.MiddleCenter;
                             TWR1LblStyle.alignment = TextAnchor.MiddleCenter;
-                            GUI.Label(new Rect(107, 110, 100, 40), "Free\nPitch", TWR1LblStyle);
+                            GUI.Label(new Rect(107, 110, 100, 40), "Orbit Drop\nControls Free", TWR1LblStyle);
                             GUI.contentColor = TWR1ContentColor;
                         }
                         else if (curVsl.TWR1HCThrustWarningTime != 0) //hit ThrustWarning altitude, warn player they have to upright their ship
@@ -624,7 +624,7 @@ namespace VerticalVelocity
                 {
                     if (curVsl.TWR1OrbitDropAllow == true) //can enter orbitdrop mode
                     {
-                        if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height\n(Free)", TWR1BtnStyle))
+                        if (GUI.Button(new Rect(107, 110, 100, 40), "Orbit Drop", TWR1BtnStyle))
                         {
                             curVsl.TWR1HeightCtrl = true;
                             curVsl.TWR1Engaged = true;
@@ -635,7 +635,7 @@ namespace VerticalVelocity
                     }
                     else //too low for orbit drop, but can enter normal height control mode
                     {
-                        if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height\n(Now)", TWR1BtnStyle))
+                        if (GUI.Button(new Rect(107, 110, 100, 40), "Auto Height", TWR1BtnStyle))
                         {
                             curVsl.TWR1HeightCtrl = true;
                             curVsl.TWR1Engaged = true;
