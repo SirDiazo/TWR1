@@ -136,7 +136,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.17 Loaded");
+            Debug.Log("Vertical Veloctiy 1.17b Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             // TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
@@ -624,7 +624,7 @@ namespace VerticalVelocity
                 {
                     if (curVsl.TWR1OrbitDropAllow == true) //can enter orbitdrop mode
                     {
-                        if (GUI.Button(new Rect(107, 110, 100, 40), "Orbit Drop", TWR1BtnStyle))
+                        if (GUI.Button(new Rect(107, 110, 100, 40), "Enter\nOrbit Drop", TWR1BtnStyle))
                         {
                             curVsl.TWR1HeightCtrl = true;
                             curVsl.TWR1Engaged = true;
