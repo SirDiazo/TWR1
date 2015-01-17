@@ -251,22 +251,38 @@ namespace VerticalVelocity
                                     {
                                          errLine = "17";
                                         TWR1EngineModuleFX = (ModuleEnginesFX)TWR1PartModule; //change from partmodules to moduleengines
-                                        double offsetMultiplier = Math.Cos(Mathf.Deg2Rad * Vector3.Angle(TWR1EngineModuleFX.thrustTransforms[0].forward, -TWR1ControlUp)); //how far off vertical is this engine?
-                                        if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModuleFX.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
+                                        errLine = "17a";
+                                        double offsetMultiplier;
+                                        try
                                         {
-                                            TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
-                                            TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
-                                            TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust since this is an SRB
-                                            TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                            errLine = "17b";
+                                            //Debug.Log("thturs " + TWR1EngineModuleFX.thrustTransforms.Count);
+                                            
+                                            offsetMultiplier = Math.Cos(Mathf.Deg2Rad * Vector3.Angle(TWR1EngineModuleFX.thrustTransforms[0].forward, -TWR1ControlUp)); //how far off vertical is this engine?
+                                        }
+                                        catch
+                                        {
+                                            offsetMultiplier = 1;
+                                        }
+                                        errLine = "17c";
+                                            if ((bool)TWR1PartModule.Fields.GetValue("throttleLocked") && TWR1EngineModuleFX.isOperational)//if throttlelocked is true, this is solid rocket booster. then check engine is operational. if the engine is flamedout, disabled via-right click or not yet activated via stage control, isOperational returns false
+                                        {
+                                            errLine = "17d";
+                                            TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
+                                            TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F));
+                                            TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust since this is an SRB
+                                            TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F));
                                         }
                                         else if (TWR1EngineModuleFX.isOperational)//we know it is an engine and not a solid rocket booster so:
                                         {
-                                            TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
-                                            TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModule.thrustPercentage / 100F));
-                                            TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
-                                            TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModule.thrustPercentage / 100F));
+                                            errLine = "17e";
+                                            TWR1MaxThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MaxThrust
+                                            TWR1MaxThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("maxThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F));
+                                            TWR1MinThrust += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F) * offsetMultiplier); //add engine thrust to MinThrust, stock engines all have min thrust of zero, but mods may not be 0
+                                            TWR1MinThrustVertical += (double)(((float)(TWR1PartModule.Fields.GetValue("minThrust")) * TWR1EngineModuleFX.thrustPercentage / 100F));
                                         }
-                                        actualThrustLastFrame += (float)TWR1EngineModule.currentThrottle * (float)TWR1EngineModule.maxThrust * (float)offsetMultiplier;
+                                            errLine = "17f";
+                                        actualThrustLastFrame += (float)TWR1EngineModuleFX.currentThrottle * (float)TWR1EngineModuleFX.maxThrust * (float)offsetMultiplier;
                                     }
 
                                 }
