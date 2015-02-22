@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ButtonReflec.cs" />
+    <Compile Include="ControlLockCalls.cs" />
     <Compile Include="TWR1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TWR1Module.cs" />

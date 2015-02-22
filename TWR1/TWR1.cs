@@ -101,6 +101,10 @@ namespace VerticalVelocity
         //public static int ControlDirection = 0; //control direction for up, 0 is for rockets, 1 for cockpits, 2 through 5 the other directions.
         //private Part LastVesselRoot; //saved vessel last update pass, use rootpart for check
         TWR1Data curVsl; //find our current vessel
+        ITargetable lastTarget;
+        bool mouseOverWindow = false;
+        bool lockSetHeight = false;
+        bool lockSetStep = false;
 
 
         public class VslTime
@@ -136,7 +140,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.17c Loaded");
+            Debug.Log("Vertical Veloctiy 1.18 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             // TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
@@ -319,12 +323,23 @@ namespace VerticalVelocity
             if (TWR1Show) //show window?
             {
                 TWR1WinPos = GUI.Window(673467798, TWR1WinPos, OnWindow, "Vertical Velocity (Key:" + TWR1KeyCode.ToString() + ")", TWR1WinStyle);
+                if(TWR1WinPos.Contains(Mouse.screenPos))
+                {
+                    mouseOverWindow = true;
+                }
+                else
+                {
+                    mouseOverWindow = false;
+                }
                 if (TWR1SettingsShow) //show settings window?
                 {
                     TWR1SettingsWin = GUI.Window(673467799, TWR1SettingsWin, OnSettingsWindow, "Settings", TWR1WinStyle);
                 }
             }
-
+            else
+            {
+                mouseOverWindow = false;
+            }
         }
 
         public void OnSettingsWindow(int WindowID)
@@ -426,7 +441,9 @@ namespace VerticalVelocity
                 TWR1LblStyle.alignment = TextAnchor.MiddleRight;
                 //GUI.skin.textField.alignment = TextAnchor.MiddleRight;//same^
                 TWR1FldStyle.alignment = TextAnchor.MiddleRight;
+                GUI.SetNextControlName("TWR1StepSize");
                 TWR1SpeedStepString = GUI.TextField(new Rect(130, 110, 50, 25), TWR1SpeedStepString, 5, TWR1FldStyle);//same^
+
                 try //try converting characters in text box to string
                 {
                     TWR1SpeedStep = (float)Convert.ToDecimal(TWR1SpeedStepString); //conversion ok, apply and save change
@@ -439,6 +456,16 @@ namespace VerticalVelocity
                     GUI.FocusControl(""); //non-number key was pressed, give focus back to ship control
                 }
 
+                if (GUI.GetNameOfFocusedControl() == "TWR1StepSize" && !lockSetStep)
+                {
+                    ControlLockCalls.SetControlLock("TWR1StepSizeLock");
+                    lockSetStep = true;
+                }
+                else if (GUI.GetNameOfFocusedControl() != "TWR1StepSize" && lockSetStep)
+                {
+                    ControlLockCalls.ReleaseControlLock("TWR1StepSizeLock");
+                    lockSetStep = false;//lockSetStep
+                }
                 if (GUI.Button(new Rect(10, 140, 70, 25), "Direction", TWR1BtnStyle)) //force skycrane mode off
                 {
                     ShowLine();
@@ -675,6 +702,7 @@ namespace VerticalVelocity
                 GUI.skin.label.alignment = TextAnchor.MiddleRight;
                 //GUI.skin.textField.alignment = TextAnchor.MiddleRight;
                 TWR1FldStyle.alignment = TextAnchor.MiddleRight;
+                GUI.SetNextControlName("TWR1TargetHeight");
                 curVsl.TWR1HCTargetString = GUI.TextField(new Rect(47, 130, 50, 20), curVsl.TWR1HCTargetString, 5, TWR1FldStyle);//same^
                 try//same^
                 {
@@ -747,6 +775,17 @@ namespace VerticalVelocity
                 GUI.DragWindow(); //window is draggable
                 GUI.skin.label.alignment = TextAnchor.MiddleLeft;
                 GUI.skin.button.alignment = TextAnchor.MiddleLeft;
+            }
+            //print(Time.time + " control " + GUI.GetNameOfFocusedControl());
+            if (GUI.GetNameOfFocusedControl() == "TWR1TargetHeight" && !lockSetHeight)
+            {
+                ControlLockCalls.SetControlLock("TWR1HeightSetPoint");
+                lockSetHeight = true;
+            }
+            else if (GUI.GetNameOfFocusedControl() != "TWR1TargetHeight" && lockSetHeight)
+            {
+                ControlLockCalls.ReleaseControlLock("TWR1HeightSetPoint");
+                lockSetHeight = false;//lockSetStep
             }
         }
 
@@ -930,6 +969,24 @@ namespace VerticalVelocity
                     }
 
                 }
+                if(mouseOverWindow)
+                {
+                    if (lastTarget==null)
+                    {
+                        lastTarget = FlightGlobals.fetch.VesselTarget;
+                    }
+                    if(lastTarget != FlightGlobals.fetch.VesselTarget)
+                    {
+                        FlightGlobals.fetch.SetVesselTarget(lastTarget);
+                    }
+                }
+                else
+                {
+                    lastTarget = null;
+                }
+
+                
+
             }
             catch(Exception e)
             {
