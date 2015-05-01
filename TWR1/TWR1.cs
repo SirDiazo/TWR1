@@ -140,7 +140,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.18 Loaded");
+            Debug.Log("Vertical Veloctiy 1.19 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             // TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
