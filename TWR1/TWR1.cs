@@ -134,14 +134,24 @@ namespace VerticalVelocity
             TWR1Show = !TWR1Show;
         }
 
+        //public void TWR1VesselChange(Vessel v)
+        //{
+        //    Debug.Log("VesselChanged!");
+        //}
 
+        //public void TWR1VesselUnDock(EventReport prt)
+        //{
+        //    Debug.Log("VesselUndock!");
+        //}
 
         public void Start() //Start runs on mod start, after all other mods loaded
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.19 Loaded");
+            Debug.Log("Vertical Veloctiy 1.20 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
+            //GameEvents.onVesselChange.Add(TWR1VesselChange);
+            //GameEvents.onUndock.Add(TWR1VesselUnDock);
             //SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
             // TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
             //if (!CompatibilityChecker.IsCompatible()) //run compatiblity check
@@ -674,7 +684,7 @@ namespace VerticalVelocity
 
                 //GUI.skin.label.alignment = TextAnchor.MiddleLeft;
                 TWR1LblStyle.alignment = TextAnchor.MiddleLeft;
-                if (curVsl.TWR1Vessel.Landed)
+                if (curVsl.vessel.Landed)
                 {
                     Color txtClr = TWR1LblStyle.normal.textColor;
                     TWR1LblStyle.normal.textColor = Color.green;
@@ -808,47 +818,88 @@ namespace VerticalVelocity
             {
                 errLine = "2";
                 try
-                { 
+                {
+                    //if(curVsl != null)
+                    //{
+                    //    if (!FlightGlobals.ActiveVessel.parts.Contains(curVsl.part))
+                    //    {
+                    //        Debug.Log("part not contained");
+                    //    }
+                    //}
+                     
+
                     if(!TWR1DataPresent(FlightGlobals.ActiveVessel) && curVsl != null)
                     {
-                        //Debug.Log("vsl null");
                         curVsl = null;
                     }
 
-                    if (curVsl == null  && TWR1DataPresent(FlightGlobals.ActiveVessel) || curVsl.vessel.rootPart != FlightGlobals.ActiveVessel.rootPart)
+                    if (curVsl == null  && TWR1DataPresent(FlightGlobals.ActiveVessel) || curVsl.vessel.rootPart != FlightGlobals.ActiveVessel.rootPart || !FlightGlobals.ActiveVessel.parts.Contains(curVsl.part))
                     {
-                        //Debug.Log("vsl switch");
                         errLine = "3";
-                        bool mdlFound = false;
+                       
+                        List<TWR1Data> dataModules = new List<TWR1Data>();
                         foreach (Part p in FlightGlobals.ActiveVessel.parts)
                         {
                             errLine = "4";
-                            foreach(TWR1Data td in p.Modules.OfType<TWR1Data>())
+                            foreach (TWR1Data td in p.Modules.OfType<TWR1Data>())
                             {
-                                if (!mdlFound)
-                                {
-                                    curVsl = td;
-                                    mdlFound = true;
-                                    //Debug.Log("td fnd");
-                                }
-                                else
-                                {
-                                    td.TWR1Engaged = false;
-                                    //Debug.Log("td not found");
-                                }
+                                dataModules.AddRange(p.Modules.OfType<TWR1Data>());
                             }
-                            if(!mdlFound)
+                        }
+                        errLine = "4a";
+                        if (dataModules.Count == 0)
+                        {
+                            errLine = "4b";
+                            curVsl = null;
+                        }
+                        else if(dataModules.Where(pm => pm.masterModule == true).Count() > 0)
+                        {
+                            errLine = "4c";
+                            curVsl = dataModules.Where(pm => pm.masterModule == true).First();
+                        }
+                        else
+                        {
+                            errLine = "4d";
+                            curVsl = dataModules.First();
+                        }
+                        errLine = "4e";
+                        foreach(TWR1Data tdata in dataModules)
+                        {
+                            if(tdata == curVsl) //make sure our master is set
                             {
-                                curVsl = null;
+                                curVsl.masterModule = true;
                             }
+                            else //all other modules are ignored
+                            {
+                                curVsl.masterModule = false;
+                                curVsl.TWR1Engaged = false;
+                            }
+                        }
+                        errLine = "4f";  //if(!masterMdlFound && td.masterModule)
+                                //{
+
+                                //}
+                                //if (!mdlFound && !masterMdlFound)
+                                //{
+                                //    curVsl = td;
+                                //    mdlFound = true;
+                                //    //Debug.Log("td fnd");
+                                //}
+                                //else 
+                                //{
+                                //    td.TWR1Engaged = false;
+                                //    //Debug.Log("td not found");
+                                //}
+                            
                             //if (p.Modules.Contains("TWR1Data"))
                             //{
                             //    errLine = "5";
                                 
                             //}
                             //errLine = "6";
-                            //goto partFound;
-                        }
+                            //goto par tFound;
+                        
+                        
                         errLine = "7";
                         //curVsl = null;
                         errLine = "8";
@@ -871,7 +922,7 @@ namespace VerticalVelocity
                 }
                 if (timerRunning)
                 {
-                    theLine.transform.parent = curVsl.TWR1Vessel.rootPart.transform;
+                    theLine.transform.parent = curVsl.vessel.rootPart.transform;
                     theLine.transform.localPosition = Vector3.zero;
                     theLine.transform.rotation = Quaternion.identity;
                     theLine.SetPosition(0, new Vector3(0, 0, 0));
@@ -886,7 +937,7 @@ namespace VerticalVelocity
                     TWR1Show = true;
                     if (curVsl.TWR1Engaged == false) //TWR1 not engaged when Z pressed so input our current velocity into velocity setpoint
                     {
-                        curVsl.TWR1VelocitySetpoint = (float)curVsl.TWR1Vessel.verticalSpeed;
+                        curVsl.TWR1VelocitySetpoint = (float)curVsl.vessel.verticalSpeed;
                     }
                     TWR1KeyDown = true; //TWR1 key is down
                     curVsl.TWR1Engaged = true; //TWR1 Engaged, auto control on
@@ -985,7 +1036,7 @@ namespace VerticalVelocity
                     lastTarget = null;
                 }
 
-                
+                //Debug.Log(curVsl.TWR1Vessel.rootPart.transform.position + "||" + curVsl.);
 
             }
             catch(Exception e)

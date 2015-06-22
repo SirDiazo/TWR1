@@ -10,6 +10,8 @@ namespace VerticalVelocity
     {
 
         [KSPField(isPersistant = true, guiActive = false)]
+        public bool masterModule = false; //is this the master module on the vessel 
+        [KSPField(isPersistant = true, guiActive = false)]
         public int controlDirection = 0; //control direction 
         [KSPField(isPersistant = true, guiActive = false)]
         public int controlMode = 0; //control mode, 0 off, 1 Velocity, 2 height 
@@ -23,7 +25,7 @@ namespace VerticalVelocity
         public double TWR1ThrustUpAngle = 0f; //thrust needed for desired accel, compensation for vessel angel
         public double TWR1DesiredAccel = 0f; //desired acceleration, includes planet grav so this can not be negative
         public double TWR1DesiredAccelThrust = 0f; //thrust needed for desired accel
-        public Vessel TWR1Vessel; //Our active vessel
+        //public Vessel TWR1Vessel; //Our active vessel
         public double TWR1Mass = 0f; //Vessel's mass
         public double TWR1MassLast = 0;
         public double TWR1MaxThrust = 0f; //Max thrust contolled by throttle, modified by current vessel angle
@@ -90,7 +92,7 @@ namespace VerticalVelocity
         {
             //Debug.Log("on");
             TWR1Engaged = true;
-            TWR1VelocitySetpoint = (float)TWR1Vessel.verticalSpeed;
+            TWR1VelocitySetpoint = (float)this.vessel.verticalSpeed;
 
         }
         
@@ -136,15 +138,15 @@ namespace VerticalVelocity
             //Debug.Log("TWR!START");
             if (HighLogic.LoadedSceneIsFlight)
             {
-                TWR1Vessel = this.part.vessel;
+                //TWR1Vessel = this.part.vessel;
                 accelDiffQueue = new Queue<float>();
             }
-            //TWR1Vessel.OnPostAutopilotUpdate += ctrlState;
+            //this.vessel.OnPostAutopilotUpdate += ctrlState;
         }
 
         //public void OnDisable()
         //{
-        //    //TWR1Vessel.OnPostAutopilotUpdate -= ctrlState;
+        //    //this.vessel.OnPostAutopilotUpdate -= ctrlState;
         //}
 
         //public void ctrlState(FlightCtrlState fc)
@@ -166,28 +168,28 @@ namespace VerticalVelocity
                 if (HighLogic.LoadedSceneIsFlight)
                 {
                     errLine = "2";
-                    TWR1VelocityCurrent = (float)TWR1Vessel.verticalSpeed; //set our current vertical velocity
+                    TWR1VelocityCurrent = (float)this.vessel.verticalSpeed; //set our current vertical velocity
                     errLine = "3";
-                    if (TWR1Vessel.mainBody.ocean)
+                    if (this.vessel.mainBody.ocean)
                     {
                         errLine = "4";
-                        TWR1HCToGround = Math.Min(TWR1Vessel.altitude - TWR1Vessel.pqsAltitude, TWR1Vessel.altitude);
+                        TWR1HCToGround = Math.Min(this.vessel.altitude - this.vessel.pqsAltitude, this.vessel.altitude);
                     }
                     else
                     {
                         errLine = "5";
-                        TWR1HCToGround = TWR1Vessel.altitude - TWR1Vessel.pqsAltitude;
+                        TWR1HCToGround = this.vessel.altitude - this.vessel.pqsAltitude;
                     }
                     errLine = "6";
-                    TWR1Mass = TWR1Vessel.GetTotalMass();
+                    TWR1Mass = this.vessel.GetTotalMass();
                     errLine = "7";
-                    TWR1SOI = TWR1Vessel.mainBody;
+                    TWR1SOI = this.vessel.mainBody;
                     errLine = "8";
-                    TWR1CoM = TWR1Vessel.findWorldCenterOfMass(); //add exception here for destoryed parts
+                    TWR1CoM = this.vessel.findWorldCenterOfMass(); //add exception here for destoryed parts
                     errLine = "9";
-                    TWR1Up = (TWR1CoM - TWR1Vessel.mainBody.position).normalized;
+                    TWR1Up = (TWR1CoM - this.vessel.mainBody.position).normalized;
                     errLine = "10";
-                    TWR1GravHeight = (float)TWR1Vessel.altitude + (float)TWR1SOI.Radius; //gravity force at this altitude (not in m/s^2)
+                    TWR1GravHeight = (float)this.vessel.altitude + (float)TWR1SOI.Radius; //gravity force at this altitude (not in m/s^2)
                     errLine = "11";
                     TWR1GravForce = (float)TWR1SOI.gMagnitudeAtCenter / (float)Math.Pow(TWR1GravHeight, 2); //accel down due to gravity in m/s^2
                     errLine = "12";
@@ -197,7 +199,7 @@ namespace VerticalVelocity
                     TWR1MinThrustVertical = 0f;
                     actualThrustLastFrame = 0f; //thrust dif reset
                     errLine = "13";
-                    foreach (Part part in TWR1Vessel.Parts) //go through each part on vessel
+                    foreach (Part part in this.vessel.Parts) //go through each part on vessel
                     {
                         errLine = "14";
                         if (part.Modules.Contains("ModuleEngines") | part.Modules.Contains("ModuleEnginesFX")) //is part an engine?
@@ -320,6 +322,7 @@ namespace VerticalVelocity
                     errLine = "19";
                     //Debug.Log("startofit " + TWR1GravForce + "||" + TWR1Mass + "||" + TWR1MaxThrust);
                     TWR1HC80Thrust = ((TWR1MaxThrustVertical * .8f) / TWR1Mass) - TWR1GravForce; //use 80% acceleration to account for being off vertical, planet grav reduces accel in this case this outside HC method for UI disaply
+                    //Debug.Log(TWR1MaxThrust + " " + TWR1MinThrust + " " + TWR1HC80Thrust);
                     errLine = "20";
                     if (!TWR1Engaged) { TWR1HeightCtrl = false; } //mod has been disengegaed, disengage height control
                     errLine = "21";
@@ -328,7 +331,7 @@ namespace VerticalVelocity
                         TWR1HCOrbitDrop = false; //Height control not engaged, we can not be doing an OrbitDrop
                     }
                     errLine = "22";
-                    TWR1ControlUp = SetDirection(controlDirection, TWR1Vessel);
+                    TWR1ControlUp = SetDirection(controlDirection, this.vessel);
                     errLine = "23";
                     TWR1OrbitDropTimeNeeded = Math.Abs(Math.Min(0, TWR1VelocityCurrent)) / Math.Abs(TWR1HC80Thrust); //how much time is needed to orbit drop? if we are positive velocity, need zero time
                     errLine = "24";
@@ -339,7 +342,7 @@ namespace VerticalVelocity
                     //Debug.Log("heightneed " + TWR1OrbitDropHeightNeeded + "||" + TWR1VelocityCurrent + "||" + TWR1GravForce + "||" + TWR1HC80Thrust);
                     TWR1HCDistToTarget = Math.Abs(TWR1HCToGround - TWR1HCTarget);
                     errLine = "26";
-                    TWR1ThrottleRead = TWR1Vessel.ctrlState.mainThrottle;
+                    TWR1ThrottleRead = this.vessel.ctrlState.mainThrottle;
 
                     errLine = "27";
 
@@ -388,14 +391,14 @@ namespace VerticalVelocity
                     TWR1MaxThrust = 1; //set MaxThrust to at least 1 to avoid this
                 }
                 errLine = "7";
-                //TWR1VelocityCurrent = (float)TWR1Vessel.verticalSpeed; //set our current vertical velocity
-                //if (TWR1Vessel.mainBody.ocean)
+                //TWR1VelocityCurrent = (float)this.vessel.verticalSpeed; //set our current vertical velocity
+                //if (this.vessel.mainBody.ocean)
                 //{
-                //    TWR1HCToGround = Math.Min(TWR1Vessel.altitude - TWR1Vessel.pqsAltitude, TWR1Vessel.altitude);
+                //    TWR1HCToGround = Math.Min(this.vessel.altitude - this.vessel.pqsAltitude, this.vessel.altitude);
                 //}
                 //else
                 //{
-                //    TWR1HCToGround = TWR1Vessel.altitude - TWR1Vessel.pqsAltitude;
+                //    TWR1HCToGround = this.vessel.altitude - this.vessel.pqsAltitude;
                 //}
                 errLine = "8";
                 //TWR1HC5Thrust = (Math.Max((TWR1MaxThrust * .05), TWR1MinThrust) / TWR1Mass) - TWR1GravForce; //accel at 5% thrust, makes sure engine is on to allow for ship horizontal speed adjustment. this outside HC method for UI dispaly
@@ -443,8 +446,8 @@ namespace VerticalVelocity
                 //    }
                 //    TWR1DesiredAccelThrustLast = TWR1DesiredAccelThrustLast / TWR1ThrustQueue.Count; //divide by count to get average of desired thrusts over last 5 frames
 
-                //    //TWR1LastFrameAccel = ((TWR1Vessel.verticalSpeed - TWR1LastVel) * TWR1FixedUpdatePerSec);
-                //    TWR1LastFrameActualThrust = ((((TWR1Vessel.verticalSpeed - TWR1LastVel) / Time.fixedDeltaTime) + TWR1GravForce) * TWR1Mass); //get actual thrust of last physics frame, note GravForce has to be present as you are always fighting gravity
+                //    //TWR1LastFrameAccel = ((this.vessel.verticalSpeed - TWR1LastVel) * TWR1FixedUpdatePerSec);
+                //    TWR1LastFrameActualThrust = ((((this.vessel.verticalSpeed - TWR1LastVel) / Time.fixedDeltaTime) + TWR1GravForce) * TWR1Mass); //get actual thrust of last physics frame, note GravForce has to be present as you are always fighting gravity
 
                 //    TWR1ThrustDiscrepancy = TWR1DesiredAccelThrustLast - TWR1LastFrameActualThrust - ThrustUnderRun; //discrepancy between thrusts the last frame,
 
@@ -519,7 +522,7 @@ namespace VerticalVelocity
                     if (TWR1HCOrbitDrop == false) //if falling from orbit, do not lock out throttle control
                     {
                         
-                            if (TWR1Vessel == FlightGlobals.ActiveVessel)
+                            if (this.vessel == FlightGlobals.ActiveVessel)
                             {
                                 if (TWR1VesselPitch < 100)
                                 {
@@ -537,11 +540,11 @@ namespace VerticalVelocity
                                 //print("set throttle");
                                 if (TWR1VesselPitch < 100)
                                 {
-                                TWR1Vessel.ctrlState.mainThrottle = (float)TWR1ThrustUp;
+                                this.vessel.ctrlState.mainThrottle = (float)TWR1ThrustUp;
                                 }
                                 else
                                 {
-                                    TWR1Vessel.ctrlState.mainThrottle = 0f;
+                                    this.vessel.ctrlState.mainThrottle = 0f;
                                 }
                             }
                         
@@ -549,11 +552,11 @@ namespace VerticalVelocity
 
                     }
                 }
-                //print("Chcekc " + TWR1Vessel.vesselName + "||" + TWR1Mass + "||" +TWR1ThrustUp);
+                //print("Chcekc " + this.vessel.vesselName + "||" + TWR1Mass + "||" +TWR1ThrustUp);
                 errLine = "15";
                 //TWR1ThrustQueue.Enqueue(TWR1DesiredAccelThrust - ThrustUnderRun); //add desired thrust value to queue
                 //VesselDead: //escape for no active vessel
-                TWR1LastVel = TWR1Vessel.verticalSpeed; //save velocity from this frame for calculations next frame
+                TWR1LastVel = this.vessel.verticalSpeed; //save velocity from this frame for calculations next frame
                 TWR1MassLast = TWR1Mass;
             }
             catch(Exception e)
@@ -567,31 +570,31 @@ namespace VerticalVelocity
         {
             if (ctrlDir == 0)
             {
-                return (TWR1Vessel.rootPart.transform.up);
+                return (this.vessel.rootPart.transform.up);
             }
             if (ctrlDir == 1)
             {
-                return (TWR1Vessel.rootPart.transform.forward);
+                return (this.vessel.rootPart.transform.forward);
             }
             if (ctrlDir == 2)
             {
-                return (-TWR1Vessel.rootPart.transform.up);
+                return (-this.vessel.rootPart.transform.up);
             }
             if (ctrlDir == 3)
             {
-                return (-TWR1Vessel.rootPart.transform.forward);
+                return (-this.vessel.rootPart.transform.forward);
             }
             if (ctrlDir == 4)
             {
-                return (TWR1Vessel.rootPart.transform.right);
+                return (this.vessel.rootPart.transform.right);
             }
             if (ctrlDir == 5)
             {
-                return (-TWR1Vessel.rootPart.transform.right);
+                return (-this.vessel.rootPart.transform.right);
             }
             else
             {
-                return (TWR1Vessel.rootPart.transform.up);
+                return (this.vessel.rootPart.transform.up);
             }
         }
 
@@ -604,7 +607,7 @@ namespace VerticalVelocity
                 if (TWR1HCThrustWarningTime != 0) //are we in thrust warning?
                 {
 
-                    if (TWR1Vessel.missionTime - TWR1HCThrustWarningTime > 15) //check to see if it is time to exit thrust warning mode
+                    if (this.vessel.missionTime - TWR1HCThrustWarningTime > 15) //check to see if it is time to exit thrust warning mode
                     {
                         TWR1HCOrbitDrop = false;
                         TWR1HCThrustWarningTime = 0;
@@ -621,7 +624,7 @@ namespace VerticalVelocity
                         //if(((Math.Sqrt(((TWR1HCDistToTarget + (TWR1VelocityCurrent * 20) - (TWR1GravForce * 10)) - (TWR1GravForce * 5)) * Math.Abs(TWR1HC80Thrust))) * -1.4) - (TWR1GravForce * 15) > TWR1VelocityCurrent)
                         if (TWR1OrbitDropHeightNeeded > TWR1HCDistToTarget)
                         {
-                            TWR1HCThrustWarningTime = TWR1Vessel.missionTime; //enter thrust warning mode
+                            TWR1HCThrustWarningTime = this.vessel.missionTime; //enter thrust warning mode
 
                             Debug.Log("war " + TWR1HCThrustWarningTime + "|" + TWR1OrbitDropHeightNeeded + "||" + TWR1HCDistToTarget);
                         }
