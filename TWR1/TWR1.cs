@@ -148,7 +148,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.20 Loaded");
+            Debug.Log("Vertical Veloctiy 1.21 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //GameEvents.onVesselChange.Add(TWR1VesselChange);
             //GameEvents.onUndock.Add(TWR1VesselUnDock);
@@ -833,18 +833,17 @@ namespace VerticalVelocity
                         curVsl = null;
                     }
 
-                    if (curVsl == null  && TWR1DataPresent(FlightGlobals.ActiveVessel) || curVsl.vessel.rootPart != FlightGlobals.ActiveVessel.rootPart || !FlightGlobals.ActiveVessel.parts.Contains(curVsl.part))
+                    if (curVsl == null  && TWR1DataPresent(FlightGlobals.ActiveVessel) || curVsl.vessel.rootPart != FlightGlobals.ActiveVessel.rootPart || !FlightGlobals.ActiveVessel.parts.Contains(curVsl.part) || !curVsl.masterModule)
                     {
                         errLine = "3";
-                       
                         List<TWR1Data> dataModules = new List<TWR1Data>();
                         foreach (Part p in FlightGlobals.ActiveVessel.parts)
                         {
                             errLine = "4";
-                            foreach (TWR1Data td in p.Modules.OfType<TWR1Data>())
-                            {
+                            //foreach (TWR1Data td in p.Modules.OfType<TWR1Data>())
+                            //{
                                 dataModules.AddRange(p.Modules.OfType<TWR1Data>());
-                            }
+                            //}
                         }
                         errLine = "4a";
                         if (dataModules.Count == 0)
@@ -871,8 +870,8 @@ namespace VerticalVelocity
                             }
                             else //all other modules are ignored
                             {
-                                curVsl.masterModule = false;
-                                curVsl.TWR1Engaged = false;
+                                tdata.masterModule = false;
+                                tdata.TWR1Engaged = false;;
                             }
                         }
                         errLine = "4f";  //if(!masterMdlFound && td.masterModule)
@@ -904,6 +903,10 @@ namespace VerticalVelocity
                         //curVsl = null;
                         errLine = "8";
                     }
+                    //foreach(Part p in FlightGlobals.ActiveVessel.parts.Where(p2 => p2.Modules.Contains("TWR1Data")))
+                    //{
+                    //    Debug.Log("MM " + p.Modules["TWR1Data"].Fields.GetValue("masterModule") + " " + p.flightID + " " + p.Modules.OfType<TWR1Data>().First().masterModule);
+                    //}
                 }
                 catch
                 {

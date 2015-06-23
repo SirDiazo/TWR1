@@ -10,7 +10,7 @@ namespace VerticalVelocity
     {
 
         [KSPField(isPersistant = true, guiActive = false)]
-        public bool masterModule = false; //is this the master module on the vessel 
+        public bool masterModule; //is this the master module on the vessel 
         [KSPField(isPersistant = true, guiActive = false)]
         public int controlDirection = 0; //control direction 
         [KSPField(isPersistant = true, guiActive = false)]
