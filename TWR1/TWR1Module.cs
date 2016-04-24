@@ -626,7 +626,7 @@ namespace VerticalVelocity
                         {
                             TWR1HCThrustWarningTime = this.vessel.missionTime; //enter thrust warning mode
 
-                            Debug.Log("war " + TWR1HCThrustWarningTime + "|" + TWR1OrbitDropHeightNeeded + "||" + TWR1HCDistToTarget);
+                            //Debug.Log("war " + TWR1HCThrustWarningTime + "|" + TWR1OrbitDropHeightNeeded + "||" + TWR1HCDistToTarget);
                         }
                     }
                 }

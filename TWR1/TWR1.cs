@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using System.Reflection;
 using System.Timers;
 using KSP.IO;
+using KSP.UI.Screens;
 
 
 
@@ -23,6 +25,7 @@ namespace VerticalVelocity
     public class TWR1 : MonoBehaviour
     {
         ApplicationLauncherButton TWR1StockButton = null; //stock toolbar button instance
+        private bool buttonCreated = false;
         private bool TWR1KeyDown = false; //Is the TWR1 being held down at the moment?
         //private bool curVsl.TWR1Engaged = false; //Is TWR1 (Thrust Weight Ratio 1) mod engaged and auto-controlling?
         //private double TWR1ThrustUp = 0f; //thrust straight up needed for desired accel
@@ -148,7 +151,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.21 Loaded");
+            Debug.Log("Vertical Veloctiy 1.30 Loaded");
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //GameEvents.onVesselChange.Add(TWR1VesselChange);
             //GameEvents.onUndock.Add(TWR1VesselUnDock);
@@ -163,7 +166,7 @@ namespace VerticalVelocity
             //    TWR1ControlOffText = "Control Off";
             //}
 
-            RenderingManager.AddToPostDrawQueue(0, OnDraw); //add call to GUI routing
+            //RenderingManager.AddToPostDrawQueue(0, OnDraw); //add call to GUI routing
             TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg"); //load .cfg file
             TWR1KeyCodeString = TWR1Node.GetValue("TWR1Key"); //read keybind from .cfg, no functionality to set keybind from ingame exists yet
             TWR1KeyCode = (KeyCode)Enum.Parse(typeof(KeyCode), TWR1KeyCodeString); //convert from text string to KeyCode item
@@ -271,7 +274,8 @@ namespace VerticalVelocity
             {
                 //AGXShow = true; //toolbar not installed, show AGX regardless
                 //now using stock toolbar as fallback
-                TWR1StockButton = ApplicationLauncher.Instance.AddModApplication(onStockToolbarClick, onStockToolbarClick, DummyVoid, DummyVoid, DummyVoid, DummyVoid, ApplicationLauncher.AppScenes.FLIGHT, (Texture)GameDatabase.Instance.GetTexture("Diazo/TWR1/icon_button", false));
+                //TWR1StockButton = ApplicationLauncher.Instance.AddModApplication(onStockToolbarClick, onStockToolbarClick, DummyVoid, DummyVoid, DummyVoid, DummyVoid, ApplicationLauncher.AppScenes.FLIGHT, (Texture)GameDatabase.Instance.GetTexture("Diazo/TWR1/icon_button", false));
+                StartCoroutine("AddButtons");
             }
             showLineTime = new System.Timers.Timer(3000);
             //showLineTime.Interval = 3;
@@ -287,6 +291,23 @@ namespace VerticalVelocity
             theLine.useWorldSpace = false;
             //LastVesselRoot = new Part();
 
+        }
+
+
+        IEnumerator AddButtons()
+        {
+            while (!ApplicationLauncher.Ready)
+            {
+                yield return null;
+            }
+            if (!buttonCreated)
+            {
+                TWR1StockButton = ApplicationLauncher.Instance.AddModApplication(onStockToolbarClick, onStockToolbarClick, DummyVoid, DummyVoid, DummyVoid, DummyVoid, ApplicationLauncher.AppScenes.FLIGHT, (Texture)GameDatabase.Instance.GetTexture("Diazo/TWR1/icon_button", false));
+                //GameEvents.onGUIApplicationLauncherReady.Remove(AddButtons);
+                //CLButton.onLeftClick(StockToolbarClick);
+                //CLButton.onRightClick = (Callback)Delegate.Combine(CLButton.onRightClick, rightClick); //combine delegates together
+                buttonCreated = true;
+            }
         }
 
         public void LineTimeOut(System.Object source, ElapsedEventArgs e)
@@ -328,7 +349,7 @@ namespace VerticalVelocity
         }
 
 
-        public void OnDraw()
+        public void OnGUI()
         {
             if (TWR1Show) //show window?
             {
@@ -956,72 +977,75 @@ namespace VerticalVelocity
                 }
                 errLine = "13";
 
-                if (GameSettings.THROTTLE_UP.GetKeyDown() == true && curVsl.TWR1Engaged == true) //throtlle up key pressed, TWR1 engaged
+                if (curVsl != null)
                 {
-                    if (curVsl.TWR1HCOrbitDrop) //orbit drop in progress
+                    if (GameSettings.THROTTLE_UP.GetKeyDown() == true && curVsl.TWR1Engaged == true) //throtlle up key pressed, TWR1 engaged
                     {
-                        //do nothing, allow KSP to control throttle
+                        if (curVsl.TWR1HCOrbitDrop) //orbit drop in progress
+                        {
+                            //do nothing, allow KSP to control throttle
+                        }
+                        else if (TWR1KeyDown == false) //Z key not down, disengage TWR1
+                        {
+
+                            curVsl.TWR1Engaged = false; //disengage TWR1 
+
+                        }
+
+                        else if (TWR1KeyDown == true) //Z key down, increse desired accel by 1 m/s^2
+                        {
+                            curVsl.TWR1VelocitySetpoint += TWR1SpeedStep;
+
+
+                            //TWR1ThrottleWhileKeyDown = true; //throttle key pressed while TWR1 keydown
+                            curVsl.TWR1HeightCtrl = false;
+                        }
                     }
-                    else if (TWR1KeyDown == false) //Z key not down, disengage TWR1
+                    errLine = "14";
+                    if (GameSettings.THROTTLE_DOWN.GetKeyDown() == true && curVsl.TWR1Engaged == true) //throtlle down key pressed, TWR1 engaged
                     {
+                        if (curVsl.TWR1HCOrbitDrop) //orbit drop in progress
+                        {
+                            //do nothing, allow KSP to control throttle
+                        }
+                        else if (TWR1KeyDown == false) ////Z key not down, disengage TWR1
+                        {
 
-                        curVsl.TWR1Engaged = false; //disengage TWR1 
+                            curVsl.TWR1Engaged = false; //disengage TWR1
 
+                        }
+                        else if (TWR1KeyDown == true)//Z key down, decrease desired accel by 1 m/s^2
+                        {
+                            curVsl.TWR1VelocitySetpoint -= TWR1SpeedStep;
+
+                            //TWR1ThrottleWhileKeyDown = true; //throttle key pressed while TWR1 keydown
+                            curVsl.TWR1HeightCtrl = false;
+
+                        }
                     }
-
-                    else if (TWR1KeyDown == true) //Z key down, increse desired accel by 1 m/s^2
+                    errLine = "15";
+                    if (GameSettings.THROTTLE_CUTOFF.GetKeyDown() == true && curVsl.TWR1Engaged == true)
                     {
-                        curVsl.TWR1VelocitySetpoint += TWR1SpeedStep;
+                        if (curVsl.TWR1HCOrbitDrop) //height control engaged and doing orbit drop
+                        {
+                            //do nothing, allow KSP to control throttle
+                        }
 
+                        else if (TWR1KeyDown == false) ////Z key not down, disengage TWR1
+                        {
+                            curVsl.TWR1Engaged = false; //disengage TWR1
+                            FlightInputHandler.state.mainThrottle = 0f; //throttle cut off hit, player will not necessarily hold it down like they will throttle up/down so zero the throttle
 
-                        //TWR1ThrottleWhileKeyDown = true; //throttle key pressed while TWR1 keydown
-                        curVsl.TWR1HeightCtrl = false;
-                    }
-                }
-                errLine = "14";
-                if (GameSettings.THROTTLE_DOWN.GetKeyDown() == true && curVsl.TWR1Engaged == true) //throtlle down key pressed, TWR1 engaged
-                {
-                    if (curVsl.TWR1HCOrbitDrop) //orbit drop in progress
-                    {
-                        //do nothing, allow KSP to control throttle
-                    }
-                    else if (TWR1KeyDown == false) ////Z key not down, disengage TWR1
-                    {
+                        }
+                        else if (TWR1KeyDown == true)//Z key down, set vert vel to 0
+                        {
+                            curVsl.TWR1VelocitySetpoint = 0f;
+                            //TWR1ThrottleWhileKeyDown = true; //throttle key pressed while TWR1 keydown
+                            curVsl.TWR1HeightCtrl = false;
 
-                        curVsl.TWR1Engaged = false; //disengage TWR1
-
-                    }
-                    else if (TWR1KeyDown == true)//Z key down, decrease desired accel by 1 m/s^2
-                    {
-                        curVsl.TWR1VelocitySetpoint -= TWR1SpeedStep;
-
-                        //TWR1ThrottleWhileKeyDown = true; //throttle key pressed while TWR1 keydown
-                        curVsl.TWR1HeightCtrl = false;
+                        }
 
                     }
-                }
-                errLine = "15";
-                if (GameSettings.THROTTLE_CUTOFF.GetKeyDown() == true && curVsl.TWR1Engaged == true)
-                {
-                    if (curVsl.TWR1HCOrbitDrop) //height control engaged and doing orbit drop
-                    {
-                        //do nothing, allow KSP to control throttle
-                    }
-
-                    else if (TWR1KeyDown == false) ////Z key not down, disengage TWR1
-                    {
-                        curVsl.TWR1Engaged = false; //disengage TWR1
-                        FlightInputHandler.state.mainThrottle = 0f; //throttle cut off hit, player will not necessarily hold it down like they will throttle up/down so zero the throttle
-
-                    }
-                    else if (TWR1KeyDown == true)//Z key down, set vert vel to 0
-                    {
-                        curVsl.TWR1VelocitySetpoint = 0f;
-                        //TWR1ThrottleWhileKeyDown = true; //throttle key pressed while TWR1 keydown
-                        curVsl.TWR1HeightCtrl = false;
-
-                    }
-
                 }
                 if(mouseOverWindow)
                 {
