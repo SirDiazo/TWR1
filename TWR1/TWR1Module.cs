@@ -699,6 +699,42 @@ namespace VerticalVelocity
 
 
         } 
+        [KSPAction("VertVel:U")]
+        public void VertVelDirUp(KSPActionParam param)
+        {
+            TWR1.thisModule.curVsl.controlDirection = 0;
+            TWR1.thisModule.ShowLine();
+        }
+        [KSPAction("VertVel:D")]
+        public void VertVelDirDown(KSPActionParam param)
+        {
+            TWR1.thisModule.curVsl.controlDirection = 2;
+            TWR1.thisModule.ShowLine();
+        }
+        [KSPAction("VertVel:L")]
+        public void VertVelDirLeft(KSPActionParam param)
+        {
+            TWR1.thisModule.curVsl.controlDirection = 5;
+            TWR1.thisModule.ShowLine();
+        }
+        [KSPAction("VertVel:R")]
+        public void VertVelDirRight(KSPActionParam param)
+        {
+            TWR1.thisModule.curVsl.controlDirection = 4;
+            TWR1.thisModule.ShowLine();
+        }
+        [KSPAction("VertVel:F")]
+        public void VertVelDirForward(KSPActionParam param)
+        {
+            TWR1.thisModule.curVsl.controlDirection = 1;
+            TWR1.thisModule.ShowLine();
+        }
+        [KSPAction("VertVel:B")]
+        public void VertVelDirBack(KSPActionParam param)
+        {
+            TWR1.thisModule.curVsl.controlDirection = 3;
+            TWR1.thisModule.ShowLine();
+        }
     }
 
 }

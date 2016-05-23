@@ -24,6 +24,7 @@ namespace VerticalVelocity
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class TWR1 : MonoBehaviour
     {
+        public static TWR1 thisModule;
         ApplicationLauncherButton TWR1StockButton = null; //stock toolbar button instance
         private bool buttonCreated = false;
         private bool TWR1KeyDown = false; //Is the TWR1 being held down at the moment?
@@ -103,12 +104,12 @@ namespace VerticalVelocity
         //Vector3 TWR1ControlUp;
         //public static int ControlDirection = 0; //control direction for up, 0 is for rockets, 1 for cockpits, 2 through 5 the other directions.
         //private Part LastVesselRoot; //saved vessel last update pass, use rootpart for check
-        TWR1Data curVsl; //find our current vessel
+        public TWR1Data curVsl; //find our current vessel
         ITargetable lastTarget;
         bool mouseOverWindow = false;
         bool lockSetHeight = false;
         bool lockSetStep = false;
-
+        bool showMyUI = true;
 
         public class VslTime
         {
@@ -151,7 +152,8 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.30 Loaded");
+            Debug.Log("Vertical Veloctiy 1.30a Loaded");
+            thisModule = this;
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //GameEvents.onVesselChange.Add(TWR1VesselChange);
             //GameEvents.onUndock.Add(TWR1VesselUnDock);
@@ -167,7 +169,30 @@ namespace VerticalVelocity
             //}
 
             //RenderingManager.AddToPostDrawQueue(0, OnDraw); //add call to GUI routing
-            TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg"); //load .cfg file
+            if (System.IO.File.Exists((string)KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings"))
+            {
+                //Debug.Log("Twr1 case 1");
+                TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings"); //load .cfg file
+            }
+            else if ((System.IO.File.Exists((string)KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg")))
+            {
+                //Debug.Log("Twr1 case 2");
+                TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg"); //load .cfg file
+                TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
+                System.IO.File.Delete(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");
+            }
+            else
+            {
+                //Debug.Log("Twr1 case 3");
+                TWR1Node = new ConfigNode();
+                TWR1Node.AddValue("TWR1Key", "None");
+                TWR1Node.AddValue("TWR1WinX", "100");
+                TWR1Node.AddValue("TWR1WinY", "100");
+                TWR1Node.AddValue("TWR1KASDisable", "false");
+                TWR1Node.AddValue("TWR1KASForce", "false");
+                TWR1Node.AddValue("TWR1Step", "1");
+                TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
+            }
             TWR1KeyCodeString = TWR1Node.GetValue("TWR1Key"); //read keybind from .cfg, no functionality to set keybind from ingame exists yet
             TWR1KeyCode = (KeyCode)Enum.Parse(typeof(KeyCode), TWR1KeyCodeString); //convert from text string to KeyCode item
 
@@ -206,6 +231,7 @@ namespace VerticalVelocity
             TWR1BtnStyle = new GUIStyle(TWR1Skin.button);
             TWR1BtnStyle.fontStyle = FontStyle.Normal;
             TWR1BtnStyle.alignment = TextAnchor.MiddleCenter;
+            
             //TWR1BtnStyle.normal.
             // print(TWR1BtnStyle.normal.background);
             //print(HighLogic.Skin.font);
@@ -289,10 +315,23 @@ namespace VerticalVelocity
             theLine.SetWidth(0, 0);
             theLine.SetVertexCount(2);
             theLine.useWorldSpace = false;
+            GameEvents.onHideUI.Add(onHideMyUI);
+            GameEvents.onShowUI.Add(onShowMyUI);
             //LastVesselRoot = new Part();
 
         }
 
+        public void onShowMyUI()
+        {
+           // Debug.Log("TWR1 Show UI");
+            showMyUI = true;
+        }
+
+        public void onHideMyUI()
+        {
+           // Debug.Log("TWR1 Show UI");
+            showMyUI = false;
+        }
 
         IEnumerator AddButtons()
         {
@@ -344,14 +383,14 @@ namespace VerticalVelocity
             }
             TWR1Node.SetValue("TWR1WinX", TWR1WinPos.x.ToString()); //save window position
             TWR1Node.SetValue("TWR1WinY", TWR1WinPos.y.ToString());//same^
-            TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");//same^
+            TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");//same^
 
         }
 
 
         public void OnGUI()
         {
-            if (TWR1Show) //show window?
+            if (TWR1Show && showMyUI) //show window?
             {
                 TWR1WinPos = GUI.Window(673467798, TWR1WinPos, OnWindow, "Vertical Velocity (Key:" + TWR1KeyCode.ToString() + ")", TWR1WinStyle);
                 if(TWR1WinPos.Contains(Mouse.screenPos))
@@ -401,7 +440,7 @@ namespace VerticalVelocity
                         TWR1SelectingKey = false; //no longer selecting a new key binding
                         TWR1KeyCodeString = TWR1KeyCode.ToString(); //save new keybinding
                         TWR1Node.SetValue("TWR1Key", TWR1KeyCodeString);//same^
-                        TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");//same^
+                        TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");//same^
                     }
                     GUI.Label(new Rect(10, 30, 150, 25), "Press New Key\nESC to unbind", TWR1LblStyle); //change GUI to indicate we are waiting for key press
                     if (GUI.Button(new Rect(110, 30, 100, 25), "Cancel", TWR1BtnStyle)) //cancel key change
@@ -479,7 +518,7 @@ namespace VerticalVelocity
                 {
                     TWR1SpeedStep = (float)Convert.ToDecimal(TWR1SpeedStepString); //conversion ok, apply and save change
                     TWR1Node.SetValue("TWR1Step", TWR1SpeedStep.ToString());
-                    TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");
+                    TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
                 }
                 catch //fail converting characters
                 {
@@ -1072,6 +1111,7 @@ namespace VerticalVelocity
             }
         }
 
+        
 
 
 
