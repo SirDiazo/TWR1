@@ -152,7 +152,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.30a Loaded");
+            Debug.Log("Vertical Veloctiy 1.30b Loaded");
             thisModule = this;
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //GameEvents.onVesselChange.Add(TWR1VesselChange);
@@ -384,6 +384,8 @@ namespace VerticalVelocity
             TWR1Node.SetValue("TWR1WinX", TWR1WinPos.x.ToString()); //save window position
             TWR1Node.SetValue("TWR1WinY", TWR1WinPos.y.ToString());//same^
             TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");//same^
+            GameEvents.onHideUI.Remove(onHideMyUI);
+            GameEvents.onShowUI.Remove(onShowMyUI);
 
         }
 
