@@ -185,7 +185,7 @@ namespace VerticalVelocity
                     errLine = "7";
                     TWR1SOI = this.vessel.mainBody;
                     errLine = "8";
-                    TWR1CoM = this.vessel.findWorldCenterOfMass(); //add exception here for destoryed parts
+                    TWR1CoM = this.vessel.GetWorldPos3D(); //add exception here for destoryed parts
                     errLine = "9";
                     TWR1Up = (TWR1CoM - this.vessel.mainBody.position).normalized;
                     errLine = "10";

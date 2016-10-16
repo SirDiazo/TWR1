@@ -152,7 +152,7 @@ namespace VerticalVelocity
         {
 
 
-            Debug.Log("Vertical Veloctiy 1.30b Loaded");
+            Debug.Log("Vertical Veloctiy 1.31 Loaded");
             thisModule = this;
             TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
             //GameEvents.onVesselChange.Add(TWR1VesselChange);
