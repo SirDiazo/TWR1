@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -52,7 +52,7 @@ namespace VerticalVelocity
         //private double TWR1OffsetVertRatio = 0f; //cosine of vessel's offset from vertical (return as unitless nubmer, so not degress or radians)
         private ConfigNode TWR1Node; //config node used to load keybind
         private string TWR1KeyCodeString = "Z"; //set the TWR1, default to Z if it can't load from TWR1.cfg
-        private KeyCode TWR1KeyCode;
+        private KeyCodeExtended TWR1KeyCode;
         //private double TWR1VelocitySetpoint = 0f; //vessel vertical velocity setpoint
         //private double TWR1VelocityCurrent = 0f; //vessel's current vertical velocity
         //private double TWR1VelocityDiff = 0f; //velocity difference between setpoint and current
@@ -150,174 +150,184 @@ namespace VerticalVelocity
 
         public void Start() //Start runs on mod start, after all other mods loaded
         {
-
-
-            Debug.Log("Vertical Veloctiy 1.31a Loaded");
-            thisModule = this;
-            TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
-            //GameEvents.onVesselChange.Add(TWR1VesselChange);
-            //GameEvents.onUndock.Add(TWR1VesselUnDock);
-            //SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
-            // TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
-            //if (!CompatibilityChecker.IsCompatible()) //run compatiblity check
-            //{
-            //    TWR1ControlOffText = "Control Off (Mod Outdated)"; //if mod outdated, display it
-            //}
-            //else
-            //{
-            //    TWR1ControlOffText = "Control Off";
-            //}
-
-            //RenderingManager.AddToPostDrawQueue(0, OnDraw); //add call to GUI routing
-            if (System.IO.File.Exists((string)KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings"))
-            {
-                //Debug.Log("Twr1 case 1");
-                TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings"); //load .cfg file
-            }
-            else if ((System.IO.File.Exists((string)KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg")))
-            {
-                //Debug.Log("Twr1 case 2");
-                TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg"); //load .cfg file
-                TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
-                System.IO.File.Delete(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");
-            }
-            else
-            {
-                //Debug.Log("Twr1 case 3");
-                TWR1Node = new ConfigNode();
-                TWR1Node.AddValue("TWR1Key", "None");
-                TWR1Node.AddValue("TWR1WinX", "100");
-                TWR1Node.AddValue("TWR1WinY", "100");
-                TWR1Node.AddValue("TWR1KASDisable", "false");
-                TWR1Node.AddValue("TWR1KASForce", "false");
-                TWR1Node.AddValue("TWR1Step", "1");
-                TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
-            }
-            TWR1KeyCodeString = TWR1Node.GetValue("TWR1Key"); //read keybind from .cfg, no functionality to set keybind from ingame exists yet
-            TWR1KeyCode = (KeyCode)Enum.Parse(typeof(KeyCode), TWR1KeyCodeString); //convert from text string to KeyCode item
-
-            TWR1SpeedStep = (float)Convert.ToDecimal(TWR1Node.GetValue("TWR1Step")); //load speed step size from file
-
-
-            //if (TWR1Node.GetValue("TWR1KASDisable") == "true") //force SkyCrane mode off
-            //{
-            //    TWR1KASDetect = false;
-            //}
-            //else if (TWR1Node.GetValue("TWR1KASForce") == "true") //force SkyCrane mode on
-            //{
-            //    TWR1KASDetect = true;
-            //}
-            //else
-            //{
-            //    foreach (AssemblyLoader.LoadedAssembly Asm in AssemblyLoader.loadedAssemblies) //auto detect KAS for Skycrane
-            //    {
-            //        if (Asm.dllName == "KAS")
-            //        {
-            //            TWR1KASDetect = true;
-            //        }
-
-            //    }
-            //}
-            TWR1Skin = (GUISkin)MonoBehaviour.Instantiate(HighLogic.Skin);
-            TWR1WinStyle = new GUIStyle(TWR1Skin.window); //GUI skin style
-            TWR1LblStyle = new GUIStyle(TWR1Skin.label);
-            TWR1FldStyle = new GUIStyle(TWR1Skin.textField);
-            TWR1FldStyle.fontStyle = FontStyle.Normal;
-            TWR1FldStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
-            //Font fontTest = Font("calibri");
-            //TWR1LblStyle.font = UnityEngine.Font("calibri");
-            TWR1LblStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
-            TWR1LblStyle.wordWrap = false;
-            TWR1BtnStyle = new GUIStyle(TWR1Skin.button);
-            TWR1BtnStyle.fontStyle = FontStyle.Normal;
-            TWR1BtnStyle.alignment = TextAnchor.MiddleCenter;
-            
-            //TWR1BtnStyle.normal.
-            // print(TWR1BtnStyle.normal.background);
-            //print(HighLogic.Skin.font);
-
-            //TWR1WinStyle = new GUIStyle();
-            //TWR1WinStyle.alignment = HighLogic.Skin.window.alignment;
-            //TWR1WinStyle.border = HighLogic.Skin.window.border;
-            //TWR1WinStyle.clipOffset = HighLogic.Skin.window.clipOffset;
-            //TWR1WinStyle.clipping = HighLogic.Skin.window.clipping;
-            //TWR1WinStyle.contentOffset = HighLogic.Skin.window.contentOffset;
-            //TWR1WinStyle.fixedHeight = HighLogic.Skin.window.fixedHeight;
-            //TWR1WinStyle.fixedWidth = HighLogic.Skin.window.fixedWidth;
-            //TWR1WinStyle.focused = HighLogic.Skin.window.focused;
-            //TWR1WinStyle.font = HighLogic.Skin.window.font;
-            //TWR1WinStyle.fontSize = HighLogic.Skin.window.fontSize;
-            //TWR1WinStyle.fontStyle = HighLogic.Skin.window.fontStyle;
-            //TWR1WinStyle.hover = HighLogic.Skin.window.hover;
-            //TWR1WinStyle.imagePosition = HighLogic.Skin.window.imagePosition;
-            //TWR1WinStyle.margin = HighLogic.Skin.window.margin;
-            //TWR1WinStyle.name = "TWR1Style";
-            //TWR1WinStyle.normal = HighLogic.Skin.window.normal;
-            //TWR1WinStyle.onActive = HighLogic.Skin.window.onActive;
-            //TWR1WinStyle.onFocused = HighLogic.Skin.window.onFocused;
-            //TWR1WinStyle.onHover = HighLogic.Skin.window.onHover;
-            //TWR1WinStyle.onNormal = HighLogic.Skin.window.onNormal;
-            //TWR1WinStyle.overflow = HighLogic.Skin.window.overflow;
-            //TWR1WinStyle.padding = HighLogic.Skin.window.padding;
-            //TWR1WinStyle.richText = HighLogic.Skin.window.richText;
-            //TWR1WinStyle.stretchHeight = HighLogic.Skin.window.stretchHeight;
-            //TWR1WinStyle.stretchWidth = HighLogic.Skin.window.stretchWidth;
-            //TWR1WinStyle.wordWrap = HighLogic.Skin.window.wordWrap;
-
+            string errLine = "1";
             try
             {
-                TWR1WinPosHeight = Convert.ToInt32(TWR1Node.GetValue("TWR1WinY")); //get saved window position
-            }
-            catch
-            {
-                TWR1WinPosHeight = (int)(Screen.height * .1);
-            }
-            try
-            {
-                TWR1WinPosWidth = Convert.ToInt32(TWR1Node.GetValue("TWR1WinX")); //get saved window position
-            }
-            catch
-            {
-                TWR1WinPosWidth = (int)(Screen.height * .1); //set window to 10% from top if fail
-            }
 
+                Debug.Log("Vertical Veloctiy 1.32 Loaded");
+                thisModule = this;
+                TWR1SettingsIcon = GameDatabase.Instance.GetTexture("Diazo/TWR1/TWR1Settings", false); //load toolbar icon
+                                                                                                       //GameEvents.onVesselChange.Add(TWR1VesselChange);
+                                                                                                       //GameEvents.onUndock.Add(TWR1VesselUnDock);
+                                                                                                       //SCVslList = new List<VslTime>(); //initialize SkyCrane vesse list
+                                                                                                       // TWR1ThrustQueue = new Queue<double>();  // initilize ThrustQueue for lift compensation
+                                                                                                       //if (!CompatibilityChecker.IsCompatible()) //run compatiblity check
+                                                                                                       //{
+                                                                                                       //    TWR1ControlOffText = "Control Off (Mod Outdated)"; //if mod outdated, display it
+                                                                                                       //}
+                                                                                                       //else
+                                                                                                       //{
+                                                                                                       //    TWR1ControlOffText = "Control Off";
+                                                                                                       //}
 
-            TWR1WinPos = new Rect(TWR1WinPosWidth, TWR1WinPosHeight, 215, 180); //set window position
-            TWR1SettingsWin = new Rect(TWR1WinPosWidth + 218, TWR1WinPosHeight, 200, 180); //set settings window position to just next to main window
-            if (ToolbarManager.ToolbarAvailable) //check if toolbar available, load if it is
-            {
-
-
-                TWR1Btn = ToolbarManager.Instance.add("TWR1", "TWR1Btn");
-                TWR1Btn.TexturePath = "Diazo/TWR1/icon_button";
-                TWR1Btn.ToolTip = "Vertical Velocity Control";
-                TWR1Btn.OnClick += (e) =>
+                //RenderingManager.AddToPostDrawQueue(0, OnDraw); //add call to GUI routing
+                if (System.IO.File.Exists((string)KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings"))
                 {
-                    onStockToolbarClick();
-                };
+                    //Debug.Log("Twr1 case 1");
+                    TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings"); //load .cfg file
+                }
+                else if ((System.IO.File.Exists((string)KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg")))
+                {
+                    //Debug.Log("Twr1 case 2");
+                    TWR1Node = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg"); //load .cfg file
+                    TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
+                    System.IO.File.Delete(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.cfg");
+                }
+                else
+                {
+                    //Debug.Log("Twr1 case 3");
+                    TWR1Node = new ConfigNode();
+                    TWR1Node.AddValue("TWR1Key", "None");
+                    TWR1Node.AddValue("TWR1WinX", "100");
+                    TWR1Node.AddValue("TWR1WinY", "100");
+                    TWR1Node.AddValue("TWR1KASDisable", "false");
+                    TWR1Node.AddValue("TWR1KASForce", "false");
+                    TWR1Node.AddValue("TWR1Step", "1");
+                    TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");
+                }
+                errLine = "10";
+                TWR1KeyCodeString = TWR1Node.GetValue("TWR1Key"); //read keybind from .cfg, no functionality to set keybind from ingame exists yet
+                errLine = "11";
+                //TWR1KeyCode.code = (KeyCode)Enum.Parse(typeof(KeyCode), TWR1KeyCodeString); //convert from text string to KeyCode item
+                TWR1KeyCode = new KeyCodeExtended(TWR1KeyCodeString);
+                errLine = "12";
+                TWR1SpeedStep = (float)Convert.ToDecimal(TWR1Node.GetValue("TWR1Step")); //load speed step size from file
+                errLine = "13";
+
+                //if (TWR1Node.GetValue("TWR1KASDisable") == "true") //force SkyCrane mode off
+                //{
+                //    TWR1KASDetect = false;
+                //}
+                //else if (TWR1Node.GetValue("TWR1KASForce") == "true") //force SkyCrane mode on
+                //{
+                //    TWR1KASDetect = true;
+                //}
+                //else
+                //{
+                //    foreach (AssemblyLoader.LoadedAssembly Asm in AssemblyLoader.loadedAssemblies) //auto detect KAS for Skycrane
+                //    {
+                //        if (Asm.dllName == "KAS")
+                //        {
+                //            TWR1KASDetect = true;
+                //        }
+
+                //    }
+                //}
+                TWR1Skin = (GUISkin)MonoBehaviour.Instantiate(HighLogic.Skin);
+                TWR1WinStyle = new GUIStyle(TWR1Skin.window); //GUI skin style
+                TWR1LblStyle = new GUIStyle(TWR1Skin.label);
+                TWR1FldStyle = new GUIStyle(TWR1Skin.textField);
+                TWR1FldStyle.fontStyle = FontStyle.Normal;
+                TWR1FldStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+                //Font fontTest = Font("calibri");
+                //TWR1LblStyle.font = UnityEngine.Font("calibri");
+                TWR1LblStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+                TWR1LblStyle.wordWrap = false;
+                TWR1BtnStyle = new GUIStyle(TWR1Skin.button);
+                TWR1BtnStyle.fontStyle = FontStyle.Normal;
+                TWR1BtnStyle.alignment = TextAnchor.MiddleCenter;
+
+                //TWR1BtnStyle.normal.
+                // print(TWR1BtnStyle.normal.background);
+                //print(HighLogic.Skin.font);
+
+                //TWR1WinStyle = new GUIStyle();
+                //TWR1WinStyle.alignment = HighLogic.Skin.window.alignment;
+                //TWR1WinStyle.border = HighLogic.Skin.window.border;
+                //TWR1WinStyle.clipOffset = HighLogic.Skin.window.clipOffset;
+                //TWR1WinStyle.clipping = HighLogic.Skin.window.clipping;
+                //TWR1WinStyle.contentOffset = HighLogic.Skin.window.contentOffset;
+                //TWR1WinStyle.fixedHeight = HighLogic.Skin.window.fixedHeight;
+                //TWR1WinStyle.fixedWidth = HighLogic.Skin.window.fixedWidth;
+                //TWR1WinStyle.focused = HighLogic.Skin.window.focused;
+                //TWR1WinStyle.font = HighLogic.Skin.window.font;
+                //TWR1WinStyle.fontSize = HighLogic.Skin.window.fontSize;
+                //TWR1WinStyle.fontStyle = HighLogic.Skin.window.fontStyle;
+                //TWR1WinStyle.hover = HighLogic.Skin.window.hover;
+                //TWR1WinStyle.imagePosition = HighLogic.Skin.window.imagePosition;
+                //TWR1WinStyle.margin = HighLogic.Skin.window.margin;
+                //TWR1WinStyle.name = "TWR1Style";
+                //TWR1WinStyle.normal = HighLogic.Skin.window.normal;
+                //TWR1WinStyle.onActive = HighLogic.Skin.window.onActive;
+                //TWR1WinStyle.onFocused = HighLogic.Skin.window.onFocused;
+                //TWR1WinStyle.onHover = HighLogic.Skin.window.onHover;
+                //TWR1WinStyle.onNormal = HighLogic.Skin.window.onNormal;
+                //TWR1WinStyle.overflow = HighLogic.Skin.window.overflow;
+                //TWR1WinStyle.padding = HighLogic.Skin.window.padding;
+                //TWR1WinStyle.richText = HighLogic.Skin.window.richText;
+                //TWR1WinStyle.stretchHeight = HighLogic.Skin.window.stretchHeight;
+                //TWR1WinStyle.stretchWidth = HighLogic.Skin.window.stretchWidth;
+                //TWR1WinStyle.wordWrap = HighLogic.Skin.window.wordWrap;
+
+                try
+                {
+                    TWR1WinPosHeight = Convert.ToInt32(TWR1Node.GetValue("TWR1WinY")); //get saved window position
+                }
+                catch
+                {
+                    TWR1WinPosHeight = (int)(Screen.height * .1);
+                }
+                try
+                {
+                    TWR1WinPosWidth = Convert.ToInt32(TWR1Node.GetValue("TWR1WinX")); //get saved window position
+                }
+                catch
+                {
+                    TWR1WinPosWidth = (int)(Screen.height * .1); //set window to 10% from top if fail
+                }
+
+
+                TWR1WinPos = new Rect(TWR1WinPosWidth, TWR1WinPosHeight, 215, 180); //set window position
+                TWR1SettingsWin = new Rect(TWR1WinPosWidth + 218, TWR1WinPosHeight, 200, 180); //set settings window position to just next to main window
+                if (ToolbarManager.ToolbarAvailable) //check if toolbar available, load if it is
+                {
+
+
+                    TWR1Btn = ToolbarManager.Instance.add("TWR1", "TWR1Btn");
+                    TWR1Btn.TexturePath = "Diazo/TWR1/icon_button";
+                    TWR1Btn.ToolTip = "Vertical Velocity Control";
+                    TWR1Btn.OnClick += (e) =>
+                    {
+                        onStockToolbarClick();
+                    };
+                }
+                else
+                {
+                    //AGXShow = true; //toolbar not installed, show AGX regardless
+                    //now using stock toolbar as fallback
+                    //TWR1StockButton = ApplicationLauncher.Instance.AddModApplication(onStockToolbarClick, onStockToolbarClick, DummyVoid, DummyVoid, DummyVoid, DummyVoid, ApplicationLauncher.AppScenes.FLIGHT, (Texture)GameDatabase.Instance.GetTexture("Diazo/TWR1/icon_button", false));
+                    StartCoroutine("AddButtons");
+                }
+                showLineTime = new System.Timers.Timer(3000);
+                //showLineTime.Interval = 3;
+                showLineTime.Elapsed += new ElapsedEventHandler(LineTimeOut);
+                showLineTime.AutoReset = false;
+
+
+                theLine = lineObj.AddComponent<LineRenderer>();
+                theLine.material = new Material(Shader.Find("Particles/Additive"));
+                theLine.SetColors(Color.red, Color.red);
+                theLine.SetWidth(0, 0);
+                theLine.SetVertexCount(2);
+                theLine.useWorldSpace = false;
+                GameEvents.onHideUI.Add(onHideMyUI);
+                GameEvents.onShowUI.Add(onShowMyUI);
+                //LastVesselRoot = new Part();
             }
-            else
+            catch(Exception e)
             {
-                //AGXShow = true; //toolbar not installed, show AGX regardless
-                //now using stock toolbar as fallback
-                //TWR1StockButton = ApplicationLauncher.Instance.AddModApplication(onStockToolbarClick, onStockToolbarClick, DummyVoid, DummyVoid, DummyVoid, DummyVoid, ApplicationLauncher.AppScenes.FLIGHT, (Texture)GameDatabase.Instance.GetTexture("Diazo/TWR1/icon_button", false));
-                StartCoroutine("AddButtons");
+                Debug.Log("TWR1 Start Fail " + errLine + " " + e);
             }
-            showLineTime = new System.Timers.Timer(3000);
-            //showLineTime.Interval = 3;
-            showLineTime.Elapsed += new ElapsedEventHandler(LineTimeOut);
-            showLineTime.AutoReset = false;
-
-
-            theLine = lineObj.AddComponent<LineRenderer>();
-            theLine.material = new Material(Shader.Find("Particles/Additive"));
-            theLine.SetColors(Color.red, Color.red);
-            theLine.SetWidth(0, 0);
-            theLine.SetVertexCount(2);
-            theLine.useWorldSpace = false;
-            GameEvents.onHideUI.Add(onHideMyUI);
-            GameEvents.onShowUI.Add(onShowMyUI);
-            //LastVesselRoot = new Part();
 
         }
 
@@ -432,15 +442,15 @@ namespace VerticalVelocity
                     {
                         if (Event.current.keyCode == KeyCode.Escape)
                         {
-                            TWR1KeyCode = KeyCode.None;
+                            TWR1KeyCode.code = KeyCode.None;
                         }
                         else
                         {
-                            TWR1KeyCode = Event.current.keyCode; //assign new key
+                            TWR1KeyCode.code = Event.current.keyCode;
                         }
 
                         TWR1SelectingKey = false; //no longer selecting a new key binding
-                        TWR1KeyCodeString = TWR1KeyCode.ToString(); //save new keybinding
+                        TWR1KeyCodeString = TWR1KeyCode.code.ToString(); //save new keybinding
                         TWR1Node.SetValue("TWR1Key", TWR1KeyCodeString);//same^
                         TWR1Node.Save(KSPUtil.ApplicationRootPath + "GameData/Diazo/TWR1/TWR1.settings");//same^
                     }
@@ -996,9 +1006,11 @@ namespace VerticalVelocity
 
                 errLine = "11";
 
-                if (Input.GetKeyDown(TWR1KeyCode) == true) //Does the Z key get pressed, enabling this mod? Note this is only true on the first Update cycle the key is pressed.
+                if (ExtendedInput.GetKeyDown(TWR1KeyCode) == true) //Does the Z key get pressed, enabling this mod? Note this is only true on the first Update cycle the key is pressed.
                 {
 
+                    InputLockManager.SetControlLock(ControlTypes.THROTTLE | ControlTypes.THROTTLE_CUT_MAX, "TWR1Throttle"); //set control lock so pressing throttle keys doesn't pulse the engine.
+                    //InputLockManager.SetControlLock(ControlTypes.All, "TWR1Throttle");
                     TWR1Show = true;
                     if (curVsl.TWR1Engaged == false) //TWR1 not engaged when Z pressed so input our current velocity into velocity setpoint
                     {
@@ -1012,8 +1024,9 @@ namespace VerticalVelocity
                     curVsl.TWR1HCOrbitDrop = false;
                 }
                 errLine = "12";
-                if (Input.GetKeyUp(TWR1KeyCode) == true) //TWR1 Key just got released.
+                if (ExtendedInput.GetKeyUp(TWR1KeyCode) == true) //TWR1 Key just got released.
                 {
+                    InputLockManager.RemoveControlLock("TWR1Throttle"); //remove throttle control lock
                     TWR1KeyDown = false; //TWR1 key is no longer held down
                 }
                 errLine = "13";
